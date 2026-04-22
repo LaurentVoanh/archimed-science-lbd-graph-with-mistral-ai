@@ -10,11 +10,10 @@ define('DB_PATH', __DIR__ . '/archimedes.db');
 define('OUTPUT_PATH', __DIR__ . '/OUTPUT/');
 define('LOG_PATH', __DIR__ . '/archimedes.log');
 
-
 $MISTRAL_KEYS = [
-    '5qaRTgfdgfd8Rake',
-    'o3rG1zvdqgsgsg3eHXRShytu',
-    'vEzQMKgsgsgsuXkF',
+    '5qaRhgfhhgffgfake',
+    'o3rG1zvhgfhXRShytu',
+    'vEzQhgfffffjFruXkF',
 ];
 define('MISTRAL_ENDPOINT', 'https://api.mistral.ai/v1/chat/completions');
 
@@ -25,7 +24,7 @@ if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     header('X-Accel-Buffering: no');
     
-    set_time_limit(1800);
+    set_time_limit(1800); // 30 minutes
     ini_set('memory_limit', '1024M');
     
     try {
@@ -119,7 +118,6 @@ function actionInitDB(PDO $db): array {
         novelty_valid INTEGER DEFAULT 0,
         vmax REAL,
         km REAL,
-        mechanism TEXT,
         retry_count INTEGER DEFAULT 0,
         report_path TEXT,
         status TEXT DEFAULT 'pending',
@@ -134,15 +132,6 @@ function actionInitDB(PDO $db): array {
     )");
 
     archLog("DB initialized OK");
-    
-    // Migrations pour bases existantes (ajout colonnes mechanism + retry_count)
-    try {
-        $db->exec("ALTER TABLE hypotheses ADD COLUMN mechanism TEXT");
-    } catch (\Throwable $e) {}
-    try {
-        $db->exec("ALTER TABLE hypotheses ADD COLUMN retry_count INTEGER DEFAULT 0");
-    } catch (\Throwable $e) {}
-    
     return ['status' => 'ok', 'message' => 'Database Archimedes v5.0 initialisée avec succès'];
 }
 
@@ -155,7 +144,6 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
     $attempts = 0;
     $lastError = '';
 
-    // LOG COMPLET : Appel entrant
     archLog("=== MISTRAL CALL START ===");
     archLog("Context: " . ($context ?: 'general'));
     archLog("Model: {$model}, MaxTokens: {$maxTokens}");
@@ -206,7 +194,6 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
         archLog("Raw response received (" . strlen($raw) . " bytes)");
         archLog("Response preview (first 1000 chars): " . substr($raw, 0, 1000));
 
-        // CORRECTIF DE VISIBILITÉ A : Logging ultra-détaillé après réception réponse API
         archLog("=== CALLMISTRALAPI DEBUG: RAW RESPONSE ===");
         archLog("Response length: " . strlen($raw) . " bytes");
         archLog("Response first 2000 chars: " . substr($raw, 0, 2000));
@@ -223,10 +210,9 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
             archLog("API ERROR: " . $lastError);
             archLog("Full error object: " . json_encode($data['error']));
             
-            // CORRECTIF MINEUR : Gestion explicite du Rate Limit 429
             if (str_contains($lastError, 'rate') || str_contains($lastError, 'limit') || str_contains($lastError, '429')) {
                 archLog("Rate limit 429 détecté - Délai explicite de 5 secondes avant retry");
-                sleep(5); // Délai explicite pour éviter de griller les clés
+                sleep(5);
             }
             continue;
         }
@@ -237,7 +223,7 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
             archLog("Response content preview (first 1000 chars): " . substr($content, 0, 1000));
             archLog("Full response structure: " . json_encode($data));
             archLog("=== MISTRAL CALL END (SUCCESS) ===");
-            sleep(1); // Rate limit: 1 req/sec
+            sleep(1);
             return ['ok' => true, 'content' => $content, 'model' => $model];
         }
 
@@ -253,7 +239,6 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
 }
 
 function parseJsonFromMistral(string $raw): ?array {
-    // CORRECTIF DE VISIBILITÉ B : Logging ultra-détaillé dans parseJsonFromMistral
     archLog("=== PARSEJSONFROMMISTRAL DEBUG START ===");
     archLog("parseJsonFromMistral: Raw input length=" . strlen($raw));
     archLog("parseJsonFromMistral: Raw preview (first 1000 chars): " . substr($raw, 0, 1000));
@@ -261,8 +246,6 @@ function parseJsonFromMistral(string $raw): ?array {
     
     $raw = trim($raw);
     
-    // Étape 0: Supprimer tout texte avant le premier { ou [ et après le dernier } ou ]
-    // C'est la protection ultime contre les réponses IA non conformes
     $firstBrace = strpos($raw, '{');
     $firstBracket = strpos($raw, '[');
     $lastBrace = strrpos($raw, '}');
@@ -285,7 +268,6 @@ function parseJsonFromMistral(string $raw): ?array {
         }
     }
     
-    // Étape 1: SUPPRIMER les balises Markdown (au cas où elles sont à l'intérieur)
     $rawBefore = $raw;
     $raw = preg_replace('/```json\s*/i', '', $raw);
     $raw = preg_replace('/```\s*/i', '', $raw);
@@ -295,16 +277,12 @@ function parseJsonFromMistral(string $raw): ?array {
         archLog("parseJsonFromMistral: After markdown removal (first 1000 chars): " . substr($raw, 0, 1000));
     }
     
-    // Étape 2: Supprimer les caractères de contrôle (sauf tab, newline)
     $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
-    
-    // Étape 3: Remplacer les guillemets courbés par des guillemets droits
     $raw = str_replace(['"', '"', '"'], '"', $raw);
     $raw = str_replace(["'", "'", "'"], "'", $raw);
     
     archLog("parseJsonFromMistral: Cleaned JSON string (first 1000 chars): " . substr($raw, 0, 1000));
     
-    // Étape 4: Tenter le parsing
     $decoded = json_decode($raw, true);
     if ($decoded !== null) {
         archLog("parseJsonFromMistral: SUCCESS on first attempt");
@@ -315,8 +293,6 @@ function parseJsonFromMistral(string $raw): ?array {
     
     archLog("parseJsonFromMistral: First parse failed: " . json_last_error_msg());
     
-    // Étape 5: Si échec, tenter de réparer les erreurs courantes
-    // Ajouter des guillemets manquants autour des keys non-quoted
     $rawRepaired = preg_replace('/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/u', '$1"$2":', $raw);
     $decoded = json_decode($rawRepaired, true);
     if ($decoded !== null) {
@@ -327,7 +303,6 @@ function parseJsonFromMistral(string $raw): ?array {
         return $decoded;
     }
     
-    // Étape 6: Logging pour debug
     archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 500));
     archLog("ParseJSON failed: Attempted repaired version (first 500 chars): " . substr($rawRepaired, 0, 500));
     archLog("=== PARSEJSONFROMMISTRAL DEBUG END (FAILED) ===");
@@ -344,13 +319,11 @@ function archLog(string $msg): void {
 // PHASE 1 — Ontologie Auto-Génératrice
 // ============================================================
 function actionPhase1Seed(PDO $db, array $keys): array {
-    // Analyse du vide informationnel
     $count = $db->query("SELECT COUNT(*) as c FROM concepts")->fetch()['c'];
     $clusters = $db->query("SELECT cluster_id, COUNT(*) as cnt FROM concepts GROUP BY cluster_id")->fetchAll();
 
     $gaps = [];
     if (count($clusters) >= 2) {
-        // Trouver clusters sans edges inter-cluster
         $stmt = $db->query("
             SELECT c1.cluster_id as ca, c2.cluster_id as cb, COUNT(e.id) as links
             FROM concepts c1
@@ -431,10 +404,10 @@ PROMPT;
 }
 
 // ============================================================
-// PHASE 2 — Moissonneur Deep-Scan
+// PHASE 2 — Moissonneur Deep-Scan (amélioré)
 // ============================================================
 function actionPhase2Harvest(PDO $db, array $keys): array {
-    // Prendre les concepts les moins saturés — LIMIT 6 au lieu de 3
+    // Augmenté à 6 concepts
     $concepts = $db->query("SELECT * FROM concepts ORDER BY saturation ASC LIMIT 6")->fetchAll();
     if (empty($concepts)) {
         return ['status' => 'error', 'message' => 'Aucun concept à traiter. Lancez Phase 1 d\'abord.'];
@@ -443,15 +416,25 @@ function actionPhase2Harvest(PDO $db, array $keys): array {
     $allArticles = [];
 
     foreach ($concepts as $concept) {
-        // Requête PubMed
         $term = urlencode($concept['mesh_term'] ?? $concept['name']);
-        $pubmedUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$term}[MeSH]&retmax=5&retmode=json&sort=relevance";
+        $pubmedUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$term}[MeSH]&retmax=8&retmode=json&sort=relevance";
         $raw = @file_get_contents($pubmedUrl);
 
         $pmids = [];
         if ($raw) {
             $pd = json_decode($raw, true);
             $pmids = $pd['esearchresult']['idlist'] ?? [];
+        }
+        
+        // Si aucun résultat MeSH, essayer avec nom seul
+        if (empty($pmids)) {
+            $term2 = urlencode($concept['name'] . " AND (therapy OR mechanism)");
+            $pubmedUrl2 = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$term2}&retmax=5&retmode=json";
+            $raw2 = @file_get_contents($pubmedUrl2);
+            if ($raw2) {
+                $pd2 = json_decode($raw2, true);
+                $pmids = $pd2['esearchresult']['idlist'] ?? [];
+            }
         }
 
         foreach (array_slice($pmids, 0, 5) as $pmid) {
@@ -475,18 +458,6 @@ function actionPhase2Harvest(PDO $db, array $keys): array {
 
             $allArticles[] = ['pmid' => $pmid, 'title' => $title, 'concept' => $concept['name']];
             sleep(1);
-        }
-
-        // Fallback MeSH si aucun PMID trouvé : chercher avec therapy OR mechanism OR pathway
-        if (empty($pmids)) {
-            $fallbackTerm = urlencode($concept['mesh_term'] ?? $concept['name']);
-            $fallbackUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$fallbackTerm}+(therapy+OR+mechanism+OR+pathway)&retmax=5&retmode=json&sort=relevance";
-            $rawFallback = @file_get_contents($fallbackUrl);
-            if ($rawFallback) {
-                $pdFallback = json_decode($rawFallback, true);
-                $pmids = $pdFallback['esearchresult']['idlist'] ?? [];
-                archLog("Fallback MeSH OK: " . count($pmids) . " PMIDs trouvés");
-            }
         }
 
         // Analyse sémantique avec Mistral
@@ -556,7 +527,6 @@ PROMPT;
             }
         }
 
-        // Mise à jour saturation
         $db->prepare("UPDATE concepts SET saturation = saturation + 0.2 WHERE id = ?")->execute([$concept['id']]);
         sleep(1);
     }
@@ -574,12 +544,10 @@ PROMPT;
 }
 
 // ============================================================
-// PHASE 3 — Graph Reasoning 4ème degré
+// PHASE 3 — Graph Reasoning 4ème degré (seuils abaissés)
 // ============================================================
 function actionPhase3Reason(PDO $db, array $keys): array {
-    // CORRECTIF CRITIQUE : Seuils abaissés pour permettre génération avec peu d'edges
-    // 4-degrés : 0.3 → 0.15, LIMIT 10 → 30
-    // SQL Multi-niveaux : chemins A→B→C→D
+    // Chemins A→B→C→D (4 degrés) avec seuils plus bas
     $paths = $db->query("
         SELECT
             ca.name as A, ea.relation_type as rel_AB, cb.name as B,
@@ -594,15 +562,14 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         JOIN concepts cb ON ea.target_id = cb.id
         JOIN concepts cc ON eb.target_id = cc.id
         JOIN concepts cd ON ec.target_id = cd.id
-        WHERE ca.id != cd.id
-          AND ea.confidence > 0.15
+        WHERE ea.confidence > 0.15
           AND eb.confidence > 0.15
           AND ec.confidence > 0.15
         ORDER BY path_strength DESC
         LIMIT 30
     ")->fetchAll();
 
-    // Chemins A→B→C (3 degrés aussi) : 0.4 → 0.2, LIMIT 15 → 40
+    // Chemins A→B→C (3 degrés)
     $paths3 = $db->query("
         SELECT
             ca.name as A, ea.relation_type as rel_AB, cb.name as B,
@@ -614,8 +581,7 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         JOIN concepts ca ON ea.source_id = ca.id
         JOIN concepts cb ON ea.target_id = cb.id
         JOIN concepts cc ON eb.target_id = cc.id
-        WHERE ca.id != cc.id
-          AND ea.confidence > 0.2
+        WHERE ea.confidence > 0.2
           AND eb.confidence > 0.2
         ORDER BY path_strength DESC
         LIMIT 40
@@ -625,7 +591,6 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         return ['status' => 'warn', 'message' => 'Pas assez d\'edges pour le raisonnement. Lancez Phase 2.', 'edges_count' => $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c']];
     }
 
-    // LOG ULTRA-DETAILÉ : Récapitulatif avant génération
     archLog("Phase3: Edge count = " . $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c']);
     archLog("Phase3: Paths 4-degrees found = " . count($paths));
     archLog("Phase3: Paths 3-degrees found = " . count($paths3));
@@ -647,13 +612,17 @@ MISSION :
 3. Détecte les clusters isolés sans lien vers des pathologies
 4. Identifie les 3 hypothèses les plus prometteuses (chemin le plus fort + inattendues)
 
+⚠️ CONTRAINTES CINÉTIQUES :
+- Vmax doit être compris entre 0.1 et 5
+- Km doit être compris entre 0.01 et 100 (µM)
+- Ne pas utiliser de valeurs nanomolaires (Km < 0.01) sauf preuve explicite
+
 ⚠️ CONTRAINTES STRICTES DE FORMAT ⚠️
 - Réponds UNIQUEMENT avec du JSON brut, SANS AUCUN texte avant ou après
 - PAS de balises markdown (pas de ```json ni ```)
 - PAS d'explications, PAS de commentaires, PAS de texte introductif ou conclusif
 - Le premier caractère de ta réponse DOIT être { ou [
 - Le dernier caractère de ta réponse DOIT être } ou ]
-- Si tu ajoutes du texte autour, ton analyse sera PERDUE
 
 FORMAT DE RÉPONSE OBLIGATOIRE (JSON brut uniquement) :
 {
@@ -666,29 +635,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON brut uniquement) :
       "probability": 0.75,
       "confidence": 0.80,
       "novelty_hint": "pourquoi c'est potentiellement nouveau",
-      "mechanism": "Mécanisme moléculaire proposé en 2-3 phrases",
       "vmax_estimate": 1.5,
-      "km_estimate": 5.0
+      "km_estimate": 0.05
     }
   ],
   "isolated_clusters": ["liste des clusters sans pathologie connue"],
   "reasoning_summary": "synthèse"
 }
 PROMPT;
-
-    // Ajout contraintes Vmax/Km dans le prompt
-    $promptWithConstraints = str_replace(
-        '"mechanism": "Mécanisme moléculaire proposé en 2-3 phrases",',
-        '"mechanism": "Mécanisme moléculaire proposé en 2-3 phrases",',
-        $prompt
-    );
-    
-    // Note sur contraintes cinétiques réalistes : Vmax [0.1–5], Km [0.01–100 µM]
-    $prompt = str_replace(
-        'FORMAT DE RÉPONSE OBLIGATOIRE',
-        "⚠️ CONTRAINTES CINÉTIQUES RÉALISTES :\n- Vmax doit être entre 0.1 et 5.0 (unités arbitraires)\n- Km doit être entre 0.01 et 100 µM\n- km_estimate par défaut : 5.0 (valeur réaliste)\n\nFORMAT DE RÉPONSE OBLIGATOIRE",
-        $prompt
-    );
 
     $result = callMistral($keys, $prompt, 'mistral-large-2512', 4096);
     if (!$result['ok']) return ['status' => 'error', 'message' => $result['error']];
@@ -699,8 +653,8 @@ PROMPT;
     }
 
     $stmt = $db->prepare("
-        INSERT INTO hypotheses (concept_a, concept_c, path, confidence, vmax, km, mechanism, status)
-        SELECT c1.id, c2.id, ?, ?, ?, ?, ?, 'pending'
+        INSERT INTO hypotheses (concept_a, concept_c, path, confidence, vmax, km, status)
+        SELECT c1.id, c2.id, ?, ?, ?, ?, 'pending'
         FROM concepts c1, concepts c2
         WHERE c1.name = ? AND c2.name = ?
     ");
@@ -708,21 +662,18 @@ PROMPT;
     $inserted = 0;
     foreach ($data['hypotheses'] as $h) {
         if (!isset($h['concept_a'], $h['concept_c'])) continue;
-        
-        // Post-traitement : clamp Vmax [0.1–5], Km [0.01–100]
-        $vmax = max(0.1, min(5.0, (float)($h['vmax_estimate'] ?? 1.0)));
-        $km = max(0.01, min(100.0, (float)($h['km_estimate'] ?? 5.0)));
-        
-        // Si Km < 0.01 → 0.01, si Vmax > 10 → 5.0
+        // Post-traitement des paramètres cinétiques
+        $vmax = $h['vmax_estimate'] ?? 1.0;
+        $km   = $h['km_estimate'] ?? 0.05;
         if ($km < 0.01) $km = 0.01;
-        if ($vmax > 10) $vmax = 5.0;
+        if ($vmax > 10) $vmax = 5;
+        if ($vmax < 0.1) $vmax = 0.1;
         
         $stmt->execute([
             $h['path'] ?? '',
             $h['confidence'] ?? 0.5,
             $vmax,
             $km,
-            $h['mechanism'] ?? '',
             $h['concept_a'],
             $h['concept_c'],
         ]);
@@ -742,16 +693,17 @@ PROMPT;
 }
 
 // ============================================================
-// PHASE 4 — Lab-in-the-Loop : Cinétique + Red Team
+// PHASE 4 — Lab-in-the-Loop : Cinétique + Red Team (assoupli)
 // ============================================================
 function actionPhase4Simulate(PDO $db, array $keys): array {
+    // Récupérer les hypothèses pending + celles rejetées avec retry_count < 3
     $hypotheses = $db->query("
         SELECT h.*, ca.name as name_a, cc.name as name_c
         FROM hypotheses h
         JOIN concepts ca ON h.concept_a = ca.id
         JOIN concepts cc ON h.concept_c = cc.id
-        WHERE h.status = 'pending'
-        LIMIT 3
+        WHERE (h.status = 'pending' OR (h.status = 'rejected' AND h.retry_count < 3))
+        LIMIT 5
     ")->fetchAll();
 
     if (empty($hypotheses)) {
@@ -763,28 +715,26 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
     foreach ($hypotheses as $h) {
         archLog("=== PHASE4: Processing hypothesis ID={$h['id']} {$h['name_a']} -> {$h['name_c']} ===");
         
-        // Simulation Michaelis-Menten
         $vMax = (float)($h['vmax'] ?? 1.0);
-        $km   = (float)($h['km'] ?? 0.001);
-        if ($km <= 0) $km = 0.001;
+        $km   = (float)($h['km'] ?? 0.05);
+        if ($km <= 0) $km = 0.05;
 
         archLog("Kinetic params: Vmax={$vMax}, Km={$km}");
 
-        $substrates = [0.0001, 0.001, 0.01, 0.1, 1.0]; // concentrations physiologiques
+        $substrates = [0.0001, 0.001, 0.01, 0.1, 1.0];
         $velocities = [];
         $isRealistic = false;
 
         foreach ($substrates as $s) {
             $v = ($vMax * $s) / ($km + $s);
             $velocities[] = round($v, 6);
-            // Réaliste si vitesse positive (tout positif est réaliste)
-            if ($v > 0) $isRealistic = true;
+            if ($v > 0) $isRealistic = true; // Toute vitesse positive est réaliste
         }
 
         archLog("Velocities: " . json_encode($velocities));
         archLog("Is realistic: " . ($isRealistic ? 'YES' : 'NO'));
 
-        // Monte Carlo : 100 itérations avec variation ±20%
+        // Monte Carlo avec CV < 0.6
         $mcResults = [];
         for ($i = 0; $i < 100; $i++) {
             $vMaxVar = $vMax * (1 + (mt_rand(-20, 20) / 100));
@@ -796,13 +746,13 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
         $mcMean   = array_sum($mcResults) / count($mcResults);
         $mcStdDev = sqrt(array_sum(array_map(fn($x) => pow($x - $mcMean, 2), $mcResults)) / count($mcResults));
         $mcCV     = $mcStdDev / ($mcMean ?: 1);
-        $mcStable = $mcCV < 0.6; // CV < 60% = stable (tolérance élargie)
+        $mcStable = $mcCV < 0.6;
 
         archLog("Monte Carlo: mean={$mcMean}, stddev={$mcStdDev}, CV={$mcCV}, stable=" . ($mcStable ? 'YES' : 'NO'));
 
-        // Agent Évaluateur "Red Team" — version équilibrée
+        // Agent Red Team équilibré (moins destructeur)
         $prompt = <<<PROMPT
-Tu es l'AGENT ÉVALUATEUR d'ARCHIMEDES v5.0. Analyse cette hypothèse de manière équilibrée.
+Tu es l'AGENT ÉVALUATEUR d'ARCHIMEDES. Analyse cette hypothèse de manière équilibrée.
 
 HYPOTHÈSE À ÉVALUER :
 - Concept A : {$h['name_a']}
@@ -813,23 +763,20 @@ HYPOTHÈSE À ÉVALUER :
 - Simulation cinétique réaliste : " . ($isRealistic ? 'OUI' : 'NON') . "
 - Monte Carlo stable : " . ($mcStable ? 'OUI' : 'NON') . " (CV=" . round($mcCV, 3) . ")
 
-ÉVALUE DE MANIÈRE ÉQUILIBRÉE :
-1. La molécule peut-elle passer la barrière hémato-encéphalique ?
-2. Y a-t-il une toxicité connue aux concentrations nécessaires ?
-3. Les concentrations Km sont-elles biologiquement plausibles ?
-4. Des études récentes soutiennent-elles ou invalident-elles ce mécanisme ?
-5. Y a-t-il des effets off-target préoccupants ?
-
-RÈGLE IMPORTANTE : Ne conclus INVALID que si une barrière est ABSOLUMENT rédhibitoire. Dans le doute → UNCERTAIN.
+RÈGLES D'ÉVALUATION :
+- Si la cinétique est plausible (Km entre 0.01 et 100 µM, Vmax entre 0.1 et 5), ne conclus pas INVALID pour ça.
+- Ne conclus INVALID que si une barrière physique/biologique est ABSOLUMENT rédhibitoire (ex. molécule ne traverse pas la BHE sans transporteur connu).
+- Dans le doute, réponds UNCERTAIN.
+- Identifie les forces et les faiblesses.
 
 Réponse JSON UNIQUEMENT :
 {
   "verdict": "VALID|UNCERTAIN|INVALID",
-  "barriers": ["liste des barrières physiques identifiées"],
+  "barriers": ["liste des barrières potentielles"],
   "toxicity_risk": "LOW|MEDIUM|HIGH",
-  "potential_flaw": "si INVALID ou UNCERTAIN, décrire le problème potentiel",
-  "confidence_adjustment": 0.1,
-  "recommendation": "PROCEED|REVISE|ABORT"
+  "fatal_flaw": "seulement si INVALID, la raison définitive",
+  "confidence_penalty": 0.0,
+  "recommendation": "PROCEED|ABORT|REVISE"
 }
 PROMPT;
 
@@ -848,45 +795,37 @@ PROMPT;
 
         archLog("Validation results: kinetic_valid={$kineticValid}, redteam_valid={$redTeamValid}");
 
-        // CORRECTIF MAJEUR : Logique OR avec garde-fou
+        // NOUVELLE LOGIQUE : accepte si pas INVALID ET (kinetic OU redteam)
         $redInvalid = ($rtData && ($rtData['verdict'] ?? '') === 'INVALID');
         if (!$redInvalid && ($kineticValid || $redTeamValid)) {
             $shouldValidate = true;
+            archLog("Phase4: Validé - kinetic={$kineticValid}, redteam={$redTeamValid}");
         } else {
             $shouldValidate = false;
+            archLog("Phase4: Rejeté - kinetic={$kineticValid}, redteam_verdict=" . ($rtData['verdict'] ?? 'N/A'));
         }
-        
-        // Boucle de retry pour hypothèses rejetées
-        if (!$shouldValidate && $h['status'] === 'rejected' && ($h['retry_count'] ?? 0) < 3) {
-            // Incrémenter retry_count et ajuster paramètres
-            $newRetryCount = ($h['retry_count'] ?? 0) + 1;
-            $newKm = (float)$h['km'] * 10;
-            $newVmax = (float)$h['vmax'] / 2;
-            
-            $db->prepare("UPDATE hypotheses SET km = ?, vmax = ?, retry_count = ?, status = 'pending' WHERE id = ?")
-                ->execute([$newKm, $newVmax, $newRetryCount, $h['id']]);
-            
-            archLog("Phase4: Retry #{$newRetryCount} pour ID={$h['id']} avec Km*10={$newKm}, Vmax/2={$newVmax}");
-            continue; // Reprocesser cette hypothèse
-        } elseif (!$shouldValidate && ($h['retry_count'] ?? 0) >= 3) {
-            $newStatus = 'archived';
-            archLog("Phase4: Archivage après 3 essais pour ID={$h['id']}");
-        } else {
-            $newStatus = $shouldValidate ? 'validated' : 'rejected';
-        }
-        
-        archLog("Final decision: status={$newStatus}");
 
-        $db->prepare("
-            UPDATE hypotheses SET 
-                kinetic_valid = ?, redteam_valid = ?, status = ?
-            WHERE id = ?
-        ")->execute([
-            $kineticValid,
-            $redTeamValid,
-            $newStatus,
-            $h['id'],
-        ]);
+        $newStatus = $shouldValidate ? 'validated' : 'rejected';
+        $retryCount = $h['retry_count'] ?? 0;
+        if ($newStatus === 'rejected' && $retryCount < 2) {
+            $retryCount++;
+            // Modifier paramètres pour réessai
+            $db->prepare("UPDATE hypotheses SET vmax = vmax * 0.8, km = km * 10, retry_count = ? WHERE id = ?")
+               ->execute([$retryCount, $h['id']]);
+            archLog("Hypothèse réessayée avec nouveaux paramètres (retry_count={$retryCount})");
+        } else {
+            $db->prepare("
+                UPDATE hypotheses SET 
+                    kinetic_valid = ?, redteam_valid = ?, status = ?, retry_count = ?
+                WHERE id = ?
+            ")->execute([
+                $kineticValid,
+                $redTeamValid,
+                $newStatus,
+                $retryCount,
+                $h['id'],
+            ]);
+        }
 
         $results[] = [
             'hypothesis_id'  => $h['id'],
@@ -909,26 +848,27 @@ PROMPT;
 }
 
 // ============================================================
-// PHASE 5 — Validation Nouveauté + Génération Preprint
+// PHASE 5 — Validation Nouveauté + Génération Preprint (élargie)
 // ============================================================
 function actionPhase5Validate(PDO $db, array $keys): array {
     archLog("=== PHASE5 START ===");
     
-    // Debug : voir combien d'hypothèses sont dans chaque statut
     $statusCounts = $db->query("SELECT status, COUNT(*) as cnt FROM hypotheses GROUP BY status")->fetchAll();
     archLog("Hypothesis status distribution: " . json_encode($statusCounts));
     
+    // Récupère les hypothèses validées OU celles qui ont kinetic_valid=1 ou redteam_valid=1
     $validated = $db->query("
         SELECT h.*, ca.name as name_a, cc.name as name_c
         FROM hypotheses h
         JOIN concepts ca ON h.concept_a = ca.id
         JOIN concepts cc ON h.concept_c = cc.id
-        WHERE h.status = 'validated' AND h.novelty_valid = 0
-        LIMIT 2
+        WHERE h.novelty_valid = 0
+          AND (h.status = 'validated' OR h.kinetic_valid = 1 OR h.redteam_valid = 1)
+          AND h.status != 'complete'
+        LIMIT 5
     ")->fetchAll();
 
     if (empty($validated)) {
-        // Vérifier s'il y a des hypothèses avec kinetic_valid=1 ou redteam_valid=1 qui ne sont pas encore traitées
         $pendingReview = $db->query("
             SELECT h.*, ca.name as name_a, cc.name as name_c
             FROM hypotheses h
@@ -942,21 +882,18 @@ function actionPhase5Validate(PDO $db, array $keys): array {
         
         if (!empty($pendingReview)) {
             archLog("Found " . count($pendingReview) . " hypotheses with partial validation that could be processed");
-            foreach ($pendingReview as $h) {
-                archLog("Pending review: ID={$h['id']} {$h['name_a']} -> {$h['name_c']}, kinetic={$h['kinetic_valid']}, redteam={$h['redteam_valid']}, status={$h['status']}");
-            }
         }
         
-        return ['status' => 'warn', 'message' => 'Aucune hypothèse validée en attente de rapport. Lancez Phases 3 & 4.'];
+        return ['status' => 'warn', 'message' => 'Aucune hypothèse validée ou partiellement validée en attente de rapport. Lancez Phases 3 & 4.'];
     }
 
-    archLog("Found " . count($validated) . " validated hypotheses to process");
+    archLog("Found " . count($validated) . " validated/partial hypotheses to process");
     $reports = [];
 
     foreach ($validated as $h) {
         archLog("=== PHASE5: Processing hypothesis ID={$h['id']} {$h['name_a']} -> {$h['name_c']} ===");
         
-        // Filtre de nouveauté absolue — PubMed NOT query
+        // Filtre de nouveauté
         $queryA = urlencode($h['name_a']);
         $queryC = urlencode($h['name_c']);
         $noveltyUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$queryA}+AND+{$queryC}&retmax=1&retmode=json";
@@ -975,7 +912,8 @@ function actionPhase5Validate(PDO $db, array $keys): array {
         $isNovel = $noveltyCount === 0;
         archLog("Novelty check: {$noveltyCount} existing articles, is_novel=" . ($isNovel ? 'YES' : 'NO'));
 
-        // Génération du Pre-print
+        // Génération du Pre-print (même pour UNCERTAIN)
+        $confidenceNote = ($h['status'] === 'validated') ? "" : " (NOTE: hypothèse partiellement validée, nécessite confirmation expérimentale)";
         $prompt = <<<PROMPT
 Tu es ARCHIMEDES v5.0, rédacteur scientifique autonome.
 
@@ -986,6 +924,7 @@ DÉCOUVERTE :
 - Chemin inféré : {$h['path']}
 - Score de confiance : {$h['confidence']}
 - Nouveauté PubMed : {$noveltyCount} articles existants (0 = absolument nouveau)
+{$confidenceNote}
 
 FORMAT OBLIGATOIRE — JSON :
 {
@@ -1019,8 +958,9 @@ PROMPT;
             $reportPath = OUTPUT_PATH . "preprint_{$h['id']}_{$slug}.md";
 
             $md = "# {$reportData['title']}\n\n";
-            $md .= "> **ARCHIMEDES v5.0** | Generated: " . date('Y-m-d H:i:s') . "\n\n";
-            $md .= "**Keywords:** " . implode(', ', $reportData['keywords'] ?? []) . "\n\n";
+            $md .= "> **ARCHIMEDES v5.0** | Generated: " . date('Y-m-d H:i:s') . "\n";
+            if ($h['status'] !== 'validated') $md .= "> **⚠️ NOTE: Hypothèse partiellement validée (nécessite validation expérimentale)**\n";
+            $md .= "\n**Keywords:** " . implode(', ', $reportData['keywords'] ?? []) . "\n\n";
             $md .= "## Abstract\n{$reportData['abstract']}\n\n";
             $md .= "## Introduction\n{$reportData['introduction']}\n\n";
             $md .= "## Proposed Mechanism\n{$reportData['mechanism']}\n\n";
@@ -1098,7 +1038,6 @@ function actionGetLogs(): array {
     $logs = '';
     if (file_exists(LOG_PATH)) {
         $lines = file(LOG_PATH);
-        // Augmenté à 200 lignes pour voir plus de détails
         $logs = implode('', array_slice($lines, -200));
     }
     return ['status' => 'ok', 'logs' => $logs];
@@ -1150,7 +1089,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Grid noise texture */
 body::before {
   content: '';
   position: fixed;
@@ -1163,7 +1101,6 @@ body::before {
   z-index: 0;
 }
 
-/* Scanline effect */
 body::after {
   content: '';
   position: fixed;
@@ -1179,7 +1116,6 @@ body::after {
   z-index: 0;
 }
 
-/* ---- HEADER ---- */
 header {
   position: relative;
   z-index: 10;
@@ -1261,7 +1197,6 @@ header {
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ---- LAYOUT ---- */
 .main-layout {
   position: relative; z-index: 1;
   display: grid;
@@ -1271,7 +1206,6 @@ header {
   gap: 0;
 }
 
-/* ---- SIDEBAR LEFT ---- */
 .sidebar-left {
   border-right: 1px solid var(--border);
   padding: 20px 16px;
@@ -1291,7 +1225,6 @@ header {
   margin-bottom: 4px;
 }
 
-/* Phase Buttons */
 .phase-btn {
   display: flex;
   align-items: center;
@@ -1360,7 +1293,6 @@ header {
 .phase-btn.success .phase-indicator { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
 .phase-btn.loading .phase-indicator { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); animation: blink 0.5s infinite; }
 
-/* Utility Buttons */
 .util-row { display: flex; gap: 8px; }
 .util-btn {
   flex: 1;
@@ -1378,7 +1310,6 @@ header {
 .util-btn:hover { border-color: var(--accent1); color: var(--accent1); background: rgba(0,200,255,0.05); }
 .util-btn.danger:hover { border-color: var(--accent4); color: var(--accent4); background: rgba(255,45,107,0.05); }
 
-/* Auto-run */
 .auto-block {
   padding: 12px 14px;
   background: var(--panel);
@@ -1403,14 +1334,12 @@ header {
 .auto-btn.active { background: rgba(255,107,0,0.1); border-color: var(--accent2); color: var(--accent2); }
 .cycle-count { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--accent2); }
 
-/* ---- CENTER PANEL ---- */
 .center-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Tab nav */
 .tab-nav {
   display: flex;
   border-bottom: 1px solid var(--border);
@@ -1440,7 +1369,6 @@ header {
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
-/* Console / Log Output */
 .console {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -1464,7 +1392,6 @@ header {
 .log-line.ok    { color: var(--accent3); }
 .log-line.dim   { color: var(--textdim); }
 
-/* Cards grid */
 .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
 .card {
   background: var(--panel);
@@ -1511,7 +1438,6 @@ header {
 .badge-reject { background: rgba(255,45,107,0.1); color: var(--accent4); border: 1px solid rgba(255,45,107,0.3); }
 .badge-warn { background: rgba(255,107,0,0.1); color: var(--accent2); border: 1px solid rgba(255,107,0,0.3); }
 
-/* Graph canvas */
 #graphCanvas {
   width: 100%;
   height: 500px;
@@ -1521,7 +1447,6 @@ header {
   display: block;
 }
 
-/* Report viewer */
 .report-item {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -1548,7 +1473,6 @@ header {
   color: var(--text);
 }
 
-/* ---- SIDEBAR RIGHT ---- */
 .sidebar-right {
   border-left: 1px solid var(--border);
   padding: 20px 16px;
@@ -1558,7 +1482,6 @@ header {
   overflow-y: auto;
 }
 
-/* Kinetic visualizer */
 .kinetic-chart {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -1586,7 +1509,6 @@ header {
 .kparam-label { font-size: 10px; color: var(--textdim); font-family: 'Share Tech Mono', monospace; }
 .kparam-val { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--accent2); margin-top: 2px; }
 
-/* Live feed */
 .live-feed {
   background: var(--bg2);
   border: 1px solid var(--border);
@@ -1606,7 +1528,6 @@ header {
 .feed-item:last-child { border-bottom: none; }
 .feed-time { color: rgba(0,200,255,0.5); font-size: 10px; }
 
-/* Progress ring */
 .progress-section { text-align: center; }
 .ring-container { position: relative; display: inline-block; margin: 10px auto; }
 .ring-label {
@@ -1620,12 +1541,10 @@ header {
 .ring-pct { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent1); }
 .ring-sub { font-size: 10px; color: var(--textdim); }
 
-/* Scrollbars */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Responsive */
 @media (max-width: 1100px) {
   .main-layout { grid-template-columns: 240px 1fr; }
   .sidebar-right { display: none; }
@@ -1655,13 +1574,12 @@ header {
   </div>
   <div class="sys-status">
     <div class="status-dot"></div>
-    <span id="sys-status-text">PHP <?= PHP_VERSION ?> · SQLite · LiteSpeed <a href="dashboard.php">dashbrd</a></span>
+    <span id="sys-status-text">PHP <?= PHP_VERSION ?> · SQLite · LiteSpeed</span>
   </div>
 </header>
 
 <div class="main-layout">
 
-  <!-- SIDEBAR LEFT — Pipeline Control -->
   <aside class="sidebar-left">
     <div class="section-title">// PIPELINE CONTROL</div>
 
@@ -1755,7 +1673,6 @@ header {
     </div>
   </aside>
 
-  <!-- CENTER PANEL -->
   <main class="center-panel">
     <nav class="tab-nav">
       <button class="tab active" onclick="showTab('console', this)">CONSOLE</button>
@@ -1767,7 +1684,6 @@ header {
 
     <div class="tab-content">
 
-      <!-- CONSOLE TAB -->
       <div id="tab-console" class="tab-pane active">
         <div class="console" id="main-console">
           <span class="log-line info">[ ARCHIMEDES v5.0 ] Autonomous Scientific Discovery Engine</span>
@@ -1778,7 +1694,6 @@ header {
         <div id="result-display" style="margin-top:16px;"></div>
       </div>
 
-      <!-- DASHBOARD TAB -->
       <div id="tab-dashboard" class="tab-pane">
         <div class="cards-grid" id="stats-grid">
           <div class="card"><div class="card-title">CONCEPTS</div><div class="card-val" id="d-concepts">—</div><div class="card-sub">Termes MeSH indexés</div></div>
@@ -1798,7 +1713,6 @@ header {
         </div>
       </div>
 
-      <!-- GRAPH TAB -->
       <div id="tab-graph" class="tab-pane">
         <div class="section-title" style="margin-bottom:12px">// KNOWLEDGE GRAPH — VISUALISATION</div>
         <canvas id="graphCanvas"></canvas>
@@ -1807,13 +1721,11 @@ header {
         </div>
       </div>
 
-      <!-- REPORTS TAB -->
       <div id="tab-reports" class="tab-pane">
         <div class="section-title" style="margin-bottom:12px">// PRE-PRINTS GÉNÉRÉS PAR L'IA</div>
         <div id="reports-container"><p style="color:var(--textdim)">Cliquez sur "REPORTS" pour charger les rapports.</p></div>
       </div>
 
-      <!-- LOGS TAB -->
       <div id="tab-logs" class="tab-pane">
         <div class="section-title" style="margin-bottom:12px">// SYSTEM LOGS</div>
         <div class="console" id="sys-logs" style="max-height:600px;">
@@ -1824,7 +1736,6 @@ header {
     </div>
   </main>
 
-  <!-- SIDEBAR RIGHT — Kinetic & Live Feed -->
   <aside class="sidebar-right">
     <div class="section-title">// KINETIC SIMULATOR</div>
     <div class="kinetic-chart">
@@ -1866,16 +1777,11 @@ header {
 </div>
 
 <script>
-// ============================================================
-// JAVASCRIPT CONTROLLER — AJAX-first, zero page reload
-// ============================================================
-
 let autoRunning = false;
 let autoCycle   = 0;
 let autoTimer   = null;
 let phaseDone   = {1:false, 2:false, 3:false, 4:false, 5:false};
 
-// ---- AJAX Engine ----
 async function ajax(action, extraData = {}) {
   const formData = new FormData();
   formData.append('action', action);
@@ -1889,7 +1795,6 @@ async function ajax(action, extraData = {}) {
   }
 }
 
-// ---- Console Logger ----
 function log(msg, type = 'info') {
   const c = document.getElementById('main-console');
   const el = document.createElement('span');
@@ -1908,7 +1813,6 @@ function addFeed(msg) {
   if (feed.children.length > 30) feed.removeChild(feed.lastChild);
 }
 
-// ---- Phase Runner ----
 async function runAction(action, btn) {
   if (btn) { btn.classList.add('loading'); btn.classList.remove('success','error'); }
   log(`→ Action: ${action} ...`, 'info');
@@ -1956,7 +1860,6 @@ async function runPhase(n, btn) {
   addFeed(`✅ Phase ${n} OK — ${summarizePhase(n, data)}`);
   showResult(data);
 
-  // Mise à jour cinétique si Phase 4
   if (n === 4 && data.simulations && data.simulations.length) {
     const sim = data.simulations[0];
     if (sim.velocities) drawKinetic(sim.velocities);
@@ -1982,7 +1885,6 @@ function summarizePhase(n, d) {
   return (s[n] || (() => JSON.stringify(d).substring(0,80)))();
 }
 
-// ---- Auto-Run ----
 async function toggleAuto() {
   const btn = document.getElementById('btn-auto');
   if (!autoRunning) {
@@ -2012,7 +1914,7 @@ async function runAutoLoop() {
     if (!autoRunning) break;
     const btn = document.getElementById(`btn-p${p}`);
     await runPhase(p, btn);
-    await new Promise(r => setTimeout(r, 3000)); // 3s entre phases
+    await new Promise(r => setTimeout(r, 3000));
   }
 
   if (autoRunning) {
@@ -2021,7 +1923,6 @@ async function runAutoLoop() {
   }
 }
 
-// ---- Result Display ----
 function showResult(data) {
   const el = document.getElementById('result-display');
   if (!el) return;
@@ -2038,7 +1939,6 @@ function showResult(data) {
   if (data.summary) html += `<div style="color:var(--textdim);margin-top:6px">${data.summary}</div>`;
   if (data.error) html += `<div style="color:var(--accent4);margin-top:4px">ERROR: ${data.error}</div>`;
 
-  // Phase-specific outputs
   if (data.simulations) {
     data.simulations.forEach(sim => {
       const badge = `<span class="badge ${sim.final_status==='VALIDATED'?'badge-valid':'badge-reject'}">${sim.final_status}</span>`;
@@ -2055,18 +1955,15 @@ function showResult(data) {
   el.innerHTML = html;
 }
 
-// ---- Stats Loader ----
 async function loadStats() {
   const data = await ajax('get_stats');
   if (data.error) return;
 
-  // Header
   document.getElementById('stat-concepts').textContent = data.concepts || 0;
   document.getElementById('stat-edges').textContent = data.edges || 0;
   document.getElementById('stat-hypotheses').textContent = data.hypotheses || 0;
   document.getElementById('stat-complete').textContent = data.complete || 0;
 
-  // Dashboard
   document.getElementById('d-concepts').textContent = data.concepts || 0;
   document.getElementById('d-edges').textContent = data.edges || 0;
   document.getElementById('d-articles').textContent = data.articles || 0;
@@ -2074,7 +1971,6 @@ async function loadStats() {
   document.getElementById('d-validated').textContent = data.validated || 0;
   document.getElementById('d-complete').textContent = data.complete || 0;
 
-  // Top concepts
   if (data.top_concepts) {
     const tc = document.getElementById('top-concepts');
     tc.innerHTML = data.top_concepts.map(c => 
@@ -2086,7 +1982,6 @@ async function loadStats() {
     ).join('');
   }
 
-  // Clusters
   if (data.clusters) {
     const colors = ['var(--accent1)','var(--accent2)','var(--accent3)','var(--accent4)','#a855f7','#f59e0b'];
     const cl = document.getElementById('clusters-display');
@@ -2096,7 +1991,6 @@ async function loadStats() {
   }
 }
 
-// ---- Graph Visualizer ----
 async function loadGraph() {
   showTab('graph', document.querySelector('.tab:nth-child(3)'));
   const data = await ajax('get_graph');
@@ -2117,7 +2011,6 @@ async function loadGraph() {
 
   if (!data.nodes.length) return;
 
-  // Position nodes with force-like layout
   const nodes = {};
   const clusterColors = ['#00c8ff','#ff6b00','#7fff00','#ff2d6b','#a855f7','#f59e0b'];
 
@@ -2136,7 +2029,6 @@ async function loadGraph() {
     };
   });
 
-  // Draw edges
   data.edges.forEach(e => {
     const src = nodes[e.source_id];
     const tgt = nodes[e.target_id];
@@ -2151,7 +2043,6 @@ async function loadGraph() {
     ctx.stroke();
   });
 
-  // Draw nodes
   Object.values(nodes).forEach(n => {
     ctx.beginPath();
     ctx.arc(n.x, n.y, 5, 0, Math.PI*2);
@@ -2167,7 +2058,6 @@ async function loadGraph() {
   });
 }
 
-// ---- Reports Loader ----
 async function loadReports() {
   showTab('reports', null);
   const data = await ajax('get_reports');
@@ -2188,7 +2078,6 @@ async function loadReports() {
   `).join('');
 }
 
-// ---- Logs ----
 async function loadLogs() {
   showTab('logs', null);
   const data = await ajax('get_logs');
@@ -2199,7 +2088,6 @@ async function loadLogs() {
   }
 }
 
-// ---- Clear DB ----
 async function confirmClear() {
   if (!confirm('⚠️ Effacer toute la base de données ? Cette action est irréversible.')) return;
   const data = await ajax('clear_db');
@@ -2209,7 +2097,6 @@ async function confirmClear() {
   updateProgress();
 }
 
-// ---- Progress Ring ----
 function updateProgress() {
   const done = Object.values(phaseDone).filter(Boolean).length;
   const pct = Math.round((done / 5) * 100);
@@ -2222,7 +2109,6 @@ function updateProgress() {
   ).join('');
 }
 
-// ---- Kinetic Chart ----
 function drawKinetic(velocities) {
   const canvas = document.getElementById('kineticCanvas');
   const ctx = canvas.getContext('2d');
@@ -2239,7 +2125,6 @@ function drawKinetic(velocities) {
   const chartW = W - padX*2;
   const chartH = H - padY*2;
 
-  // Grid
   ctx.strokeStyle = 'rgba(26,58,92,0.5)';
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
@@ -2247,7 +2132,6 @@ function drawKinetic(velocities) {
     ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W-padX, y); ctx.stroke();
   }
 
-  // Michaelis-Menten curve (smooth)
   ctx.beginPath();
   ctx.strokeStyle = 'var(--accent2)';
   ctx.lineWidth = 2;
@@ -2262,7 +2146,6 @@ function drawKinetic(velocities) {
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Points
   velocities.forEach((v, i) => {
     const x = padX + (i / (velocities.length - 1)) * chartW;
     const y = padY + chartH - (v / maxV) * chartH;
@@ -2273,7 +2156,6 @@ function drawKinetic(velocities) {
   });
 }
 
-// ---- Tab Switcher ----
 function showTab(name, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -2286,12 +2168,11 @@ function showTab(name, btn) {
   if (name === 'logs') loadLogs();
 }
 
-// ---- Init ----
 document.addEventListener('DOMContentLoaded', () => {
   loadStats();
   updateProgress();
-  drawKinetic([0.001, 0.09, 0.33, 0.66, 0.90]); // Default curve
-  setInterval(loadStats, 30000); // Auto-refresh every 30s
+  drawKinetic([0.001, 0.09, 0.33, 0.66, 0.90]);
+  setInterval(loadStats, 30000);
 });
 </script>
 </body>
