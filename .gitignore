@@ -1,1 +1,9 @@
-Nothing should be ignored based on the provided changes. The only modified file is `index.php`, which is a source code file and should not be added to .gitignore.
+```
+# Environment files
+.env
+.env.local
+.env.*
+
+# Backup files
+*.bak
+```
