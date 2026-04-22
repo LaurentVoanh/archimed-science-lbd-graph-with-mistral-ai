@@ -198,7 +198,13 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
 function parseJsonFromMistral(string $raw): ?array {
     $raw = trim($raw);
     
-    // Étape 1: Extraire le bloc JSON même s'il est entouré de texte
+    // Étape 1: SUPPRIMER D'ABORD les balises Markdown (avant toute extraction)
+    // Mistral peut ajouter du texte avant/après les balises ```json ... ```
+    $raw = preg_replace('/```json\s*/i', '', $raw);
+    $raw = preg_replace('/```\s*/i', '', $raw);
+    $raw = trim($raw);
+    
+    // Étape 2: Extraire le bloc JSON même s'il est entouré de texte
     // Cherche le premier { ou [ et le dernier } ou ]
     $firstBrace = strpos($raw, '{');
     $firstBracket = strpos($raw, '[');
@@ -219,12 +225,6 @@ function parseJsonFromMistral(string $raw): ?array {
             $raw = substr($raw, $start, $end - $start + 1);
         }
     }
-    
-    // Étape 2: Supprimer les balises Markdown résiduelles
-    $raw = preg_replace('/^```json\s*/i', '', $raw);
-    $raw = preg_replace('/^```\s*/i', '', $raw);
-    $raw = preg_replace('/\s*```$/i', '', $raw);
-    $raw = trim($raw);
     
     // Étape 3: Supprimer les caractères de contrôle (sauf tab, newline)
     $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
