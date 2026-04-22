@@ -194,6 +194,11 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
         archLog("Raw response received (" . strlen($raw) . " bytes)");
         archLog("Response preview (first 1000 chars): " . substr($raw, 0, 1000));
 
+        // CORRECTIF DE VISIBILITÉ A : Logging ultra-détaillé après réception réponse API
+        archLog("=== CALLMISTRALAPI DEBUG: RAW RESPONSE ===");
+        archLog("Response length: " . strlen($raw) . " bytes");
+        archLog("Response first 2000 chars: " . substr($raw, 0, 2000));
+
         $data = json_decode($raw, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -205,9 +210,11 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
             $lastError = $data['error']['message'] ?? 'API error';
             archLog("API ERROR: " . $lastError);
             archLog("Full error object: " . json_encode($data['error']));
-            if (str_contains($lastError, 'rate') || str_contains($lastError, 'limit')) {
-                archLog("Rate limit detected, sleeping 3s");
-                sleep(3);
+            
+            // CORRECTIF MINEUR : Gestion explicite du Rate Limit 429
+            if (str_contains($lastError, 'rate') || str_contains($lastError, 'limit') || str_contains($lastError, '429')) {
+                archLog("Rate limit 429 détecté - Délai explicite de 5 secondes avant retry");
+                sleep(5); // Délai explicite pour éviter de griller les clés
             }
             continue;
         }
@@ -234,8 +241,11 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
 }
 
 function parseJsonFromMistral(string $raw): ?array {
+    // CORRECTIF DE VISIBILITÉ B : Logging ultra-détaillé dans parseJsonFromMistral
+    archLog("=== PARSEJSONFROMMISTRAL DEBUG START ===");
     archLog("parseJsonFromMistral: Raw input length=" . strlen($raw));
-    archLog("parseJsonFromMistral: Raw preview (first 500 chars): " . substr($raw, 0, 500));
+    archLog("parseJsonFromMistral: Raw preview (first 1000 chars): " . substr($raw, 0, 1000));
+    archLog("parseJsonFromMistral: Raw full content: " . $raw);
     
     $raw = trim($raw);
     
@@ -259,6 +269,7 @@ function parseJsonFromMistral(string $raw): ?array {
         if ($start <= $end && $start < strlen($raw)) {
             $raw = substr($raw, $start, $end - $start + 1);
             archLog("parseJsonFromMistral: Extracted JSON block from {$start} to {$end}");
+            archLog("parseJsonFromMistral: Extracted JSON (first 1000 chars): " . substr($raw, 0, 1000));
         }
     }
     
@@ -269,6 +280,7 @@ function parseJsonFromMistral(string $raw): ?array {
     $raw = trim($raw);
     if ($raw !== $rawBefore) {
         archLog("parseJsonFromMistral: Removed markdown backticks");
+        archLog("parseJsonFromMistral: After markdown removal (first 1000 chars): " . substr($raw, 0, 1000));
     }
     
     // Étape 2: Supprimer les caractères de contrôle (sauf tab, newline)
@@ -278,12 +290,14 @@ function parseJsonFromMistral(string $raw): ?array {
     $raw = str_replace(['"', '"', '"'], '"', $raw);
     $raw = str_replace(["'", "'", "'"], "'", $raw);
     
-    archLog("parseJsonFromMistral: Cleaned JSON string (first 500 chars): " . substr($raw, 0, 500));
+    archLog("parseJsonFromMistral: Cleaned JSON string (first 1000 chars): " . substr($raw, 0, 1000));
     
     // Étape 4: Tenter le parsing
     $decoded = json_decode($raw, true);
     if ($decoded !== null) {
         archLog("parseJsonFromMistral: SUCCESS on first attempt");
+        archLog("parseJsonFromMistral: Decoded data structure: " . json_encode($decoded));
+        archLog("=== PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===");
         return $decoded;
     }
     
@@ -295,12 +309,16 @@ function parseJsonFromMistral(string $raw): ?array {
     $decoded = json_decode($rawRepaired, true);
     if ($decoded !== null) {
         archLog("parseJsonFromMistral: SUCCESS after key repair");
+        archLog("parseJsonFromMistral: Repaired JSON (first 1000 chars): " . substr($rawRepaired, 0, 1000));
+        archLog("parseJsonFromMistral: Decoded data structure: " . json_encode($decoded));
+        archLog("=== PARSEJSONFROMMISTRAL DEBUG END (REPAIRED) ===");
         return $decoded;
     }
     
     // Étape 6: Logging pour debug
-    archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 300));
-    archLog("ParseJSON failed: Attempted repaired version (first 300 chars): " . substr($rawRepaired, 0, 300));
+    archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 500));
+    archLog("ParseJSON failed: Attempted repaired version (first 500 chars): " . substr($rawRepaired, 0, 500));
+    archLog("=== PARSEJSONFROMMISTRAL DEBUG END (FAILED) ===");
     
     return null;
 }
@@ -535,6 +553,7 @@ PROMPT;
 // PHASE 3 — Graph Reasoning 4ème degré
 // ============================================================
 function actionPhase3Reason(PDO $db, array $keys): array {
+    // CORRECTIF CRITIQUE : Seuils abaissés pour permettre génération avec peu d'edges
     // SQL Multi-niveaux : chemins A→B→C→D
     $paths = $db->query("
         SELECT
@@ -551,9 +570,9 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         JOIN concepts cc ON eb.target_id = cc.id
         JOIN concepts cd ON ec.target_id = cd.id
         WHERE ca.id != cd.id
-          AND ea.confidence > 0.5
-          AND eb.confidence > 0.5
-          AND ec.confidence > 0.5
+          AND ea.confidence > 0.3
+          AND eb.confidence > 0.3
+          AND ec.confidence > 0.3
         ORDER BY path_strength DESC
         LIMIT 10
     ")->fetchAll();
@@ -571,8 +590,8 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         JOIN concepts cb ON ea.target_id = cb.id
         JOIN concepts cc ON eb.target_id = cc.id
         WHERE ca.id != cc.id
-          AND ea.confidence > 0.6
-          AND eb.confidence > 0.6
+          AND ea.confidence > 0.4
+          AND eb.confidence > 0.4
         ORDER BY path_strength DESC
         LIMIT 15
     ")->fetchAll();
@@ -580,6 +599,12 @@ function actionPhase3Reason(PDO $db, array $keys): array {
     if (empty($paths3) && empty($paths)) {
         return ['status' => 'warn', 'message' => 'Pas assez d\'edges pour le raisonnement. Lancez Phase 2.', 'edges_count' => $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c']];
     }
+
+    // LOG ULTRA-DETAILÉ : Récapitulatif avant génération
+    archLog("Phase3: Edge count = " . $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c']);
+    archLog("Phase3: Paths 4-degrees found = " . count($paths));
+    archLog("Phase3: Paths 3-degrees found = " . count($paths3));
+    archLog("Phase3: Total paths for hypothesis generation = " . count(array_merge($paths3, $paths)));
 
     $pathsDesc = json_encode(array_merge($paths3, $paths), JSON_PRETTY_PRINT);
 
@@ -771,18 +796,24 @@ PROMPT;
 
         archLog("Validation results: kinetic_valid={$kineticValid}, redteam_valid={$redTeamValid}");
 
-        // CRITÈRE ASSOUPÉLI : Accepter si au moins 1 des 2 critères est validé
-        // OU si le Red Team dit UNCERTAIN (pas clairement INVALID)
-        $shouldValidate = ($kineticValid || $redTeamValid) && (!$rtData || ($rtData['verdict'] ?? '') !== 'INVALID');
+        // CORRECTIF MAJEUR : Logique OR avec garde-fou (au lieu de AND)
+        // On valide si AU MOINS un des deux critères est bon, sauf si Red Team dit clairement INVALID
+        $shouldValidate = false;
         
-        // Encore plus souple : si kinetic est bon ET redteam n'est pas clairement INVALID, on valide
+        // Si la cinétique est bonne ET que le Red Team n'a pas dit INVALID, on valide
         if ($kineticValid && (!$rtData || ($rtData['verdict'] ?? '') !== 'INVALID')) {
             $shouldValidate = true;
+            archLog("Phase4: Validé par cinétique OK + Red Team non-INVALID");
         }
-        
-        // Si les deux sont mauvais, on rejette
-        if (!$kineticValid && !$redTeamValid) {
+        // OU si le Red Team dit VALID/UNCERTAIN même si cinétique moyenne
+        elseif ($redTeamValid && (!$rtData || in_array($rtData['verdict'] ?? '', ['VALID', 'UNCERTAIN']))) {
+            $shouldValidate = true;
+            archLog("Phase4: Validé par Red Team favorable");
+        }
+        // Garde-fou : si les deux sont mauvais ou si Red Team dit INVALID, on rejette
+        else {
             $shouldValidate = false;
+            archLog("Phase4: Rejeté - kinetic={$kineticValid}, redteam_verdict=" . ($rtData['verdict'] ?? 'N/A'));
         }
 
         $newStatus = $shouldValidate ? 'validated' : 'rejected';
