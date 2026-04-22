@@ -197,13 +197,67 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
 
 function parseJsonFromMistral(string $raw): ?array {
     $raw = trim($raw);
+    
+    // Étape 1: Extraire le bloc JSON même s'il est entouré de texte
+    // Cherche le premier { ou [ et le dernier } ou ]
+    $firstBrace = strpos($raw, '{');
+    $firstBracket = strpos($raw, '[');
+    $lastBrace = strrpos($raw, '}');
+    $lastBracket = strrpos($raw, ']');
+    
+    if ($firstBrace !== false || $firstBracket !== false) {
+        $start = min(
+            $firstBrace !== false ? $firstBrace : PHP_INT_MAX,
+            $firstBracket !== false ? $firstBracket : PHP_INT_MAX
+        );
+        $end = max(
+            $lastBrace !== false ? $lastBrace : -1,
+            $lastBracket !== false ? $lastBracket : -1
+        );
+        
+        if ($start <= $end && $start < strlen($raw)) {
+            $raw = substr($raw, $start, $end - $start + 1);
+        }
+    }
+    
+    // Étape 2: Supprimer les balises Markdown résiduelles
     $raw = preg_replace('/^```json\s*/i', '', $raw);
     $raw = preg_replace('/^```\s*/i', '', $raw);
     $raw = preg_replace('/\s*```$/i', '', $raw);
-    // Remove control characters
+    $raw = trim($raw);
+    
+    // Étape 3: Supprimer les caractères de contrôle (sauf tab, newline)
     $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
+    
+    // Étape 4: Nettoyer les espaces blancs dans les strings (optionnel)
+    // $raw = preg_replace('/\s+/', ' ', $raw);
+    
+    // Étape 5: Tenter le parsing
     $decoded = json_decode($raw, true);
-    return $decoded ?? null;
+    if ($decoded !== null) {
+        return $decoded;
+    }
+    
+    // Étape 6: Si échec, tenter de réparer les erreurs courantes
+    // Ajouter des guillemets manquants autour des keys non-quoted
+    $raw = preg_replace('/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/u', '$1"$2":', $raw);
+    $decoded = json_decode($raw, true);
+    if ($decoded !== null) {
+        return $decoded;
+    }
+    
+    // Étape 7: Remplacer les guillemets courbés par des guillemets droits
+    $raw = str_replace(['"', '"', '"'], '"', $raw);
+    $raw = str_replace(["'", "'", "'"], "'", $raw);
+    $decoded = json_decode($raw, true);
+    if ($decoded !== null) {
+        return $decoded;
+    }
+    
+    // Étape 8: Logging pour debug
+    archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 200));
+    
+    return null;
 }
 
 function archLog(string $msg): void {
