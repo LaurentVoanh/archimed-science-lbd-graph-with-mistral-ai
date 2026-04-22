@@ -1382,7 +1382,7 @@ header {
   </div>
   <div class="sys-status">
     <div class="status-dot"></div>
-    <span id="sys-status-text">PHP <?= PHP_VERSION ?> · SQLite · LiteSpeed</span>
+    <span id="sys-status-text">PHP <?= PHP_VERSION ?> · SQLite · LiteSpeed <a href="dashboard.php">dashbrd</a></span>
   </div>
 </header>
 
