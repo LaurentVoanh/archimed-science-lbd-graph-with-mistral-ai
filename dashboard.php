@@ -1,8 +1,11 @@
 <?php
-// ============================================================
-// ARCHIMEDES DASHBOARD v5.3 — Correction Structure DB
-// ============================================================
+/**
+ * ARCHIMEDES DASHBOARD v6.5 - ULTIMATE REPAIR
+ * Fix : Détection dynamique des colonnes de la table 'hypotheses'
+ */
 
+define('ARCH_VERSION', '5.0'); 
+define('DASH_VERSION', '6.5');
 define('DB_PATH', __DIR__ . '/archimedes.db');
 define('OUTPUT_PATH', __DIR__ . '/OUTPUT/');
 define('LOG_PATH', __DIR__ . '/archimedes.log');
@@ -10,192 +13,146 @@ define('LOG_PATH', __DIR__ . '/archimedes.log');
 try {
     $db = new PDO('sqlite:' . DB_PATH);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    // --- AUTO-DETECTION TABLE EDGES ---
+    $qEdges = $db->query("PRAGMA table_info(edges)");
+    $colsEdges = $qEdges->fetchAll(PDO::FETCH_COLUMN, 1);
+    $colA = in_array('concept_a', $colsEdges) ? 'concept_a' : (in_array('source', $colsEdges) ? 'source' : $colsEdges[0]);
+    $colB = in_array('concept_b', $colsEdges) ? 'concept_b' : (in_array('target', $colsEdges) ? 'target' : $colsEdges[1]);
+
+    // --- AUTO-DETECTION TABLE HYPOTHESES (Fix pour l'erreur Title/Abstract) ---
+    $qHypo = $db->query("PRAGMA table_info(hypotheses)");
+    $colsHypo = $qHypo->fetchAll(PDO::FETCH_COLUMN, 1);
+    // On cherche les noms probables, sinon on prend les colonnes par index
+    $hTitle = in_array('title', $colsHypo) ? 'title' : (in_array('hypothesis', $colsHypo) ? 'hypothesis' : $colsHypo[min(1, count($colsHypo)-1)]);
+    $hDesc  = in_array('abstract', $colsHypo) ? 'abstract' : (in_array('content', $colsHypo) ? 'content' : $colsHypo[min(2, count($colsHypo)-1)]);
+
 } catch (Exception $e) {
-    die("Base de données introuvable. Lancez archimedes.php d'abord.");
+    die("Erreur base de données : " . $e->getMessage());
 }
 
-// Stats rapides
+// Stats
 $stats = [
-    'concepts'   => (int)$db->query("SELECT COUNT(*) FROM concepts")->fetchColumn(),
-    'relations'  => (int)$db->query("SELECT COUNT(*) FROM edges")->fetchColumn(),
-    'hypotheses' => (int)$db->query("SELECT COUNT(*) FROM hypotheses")->fetchColumn(),
+    'concepts'   => (int)($db->query("SELECT COUNT(*) FROM concepts")->fetchColumn() ?: 0),
+    'relations'  => (int)($db->query("SELECT COUNT(*) FROM edges")->fetchColumn() ?: 0),
+    'hypotheses' => (int)($db->query("SELECT COUNT(*) FROM hypotheses")->fetchColumn() ?: 0),
     'preprints'  => is_dir(OUTPUT_PATH) ? count(glob(OUTPUT_PATH . "*.md")) : 0
 ];
 
-$tab = $_GET['tab'] ?? 'knowledge';
+$tab = $_GET['tab'] ?? 'network';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Archimedes v5.3 — Dashboard</title>
+    <title>ARCHIMEDES CONTROL v<?php echo DASH_VERSION; ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css">
     <style>
-        :root { --accent: #00ffcc; --bg-card: #1a1a1a; }
-        body { max-width: 1200px; margin: auto; }
-        .grid-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0; }
-        .card-stat { background: var(--bg-card); padding: 20px; border-radius: 10px; text-align: center; border-bottom: 3px solid var(--accent); }
-        .nav { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 1px solid #444; padding-bottom: 10px; }
-        .btn { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block; }
-        .btn.active { background: var(--accent); color: black; font-weight: bold; }
-        .hypo-card { background: var(--bg-card); border: 1px solid #333; padding: 20px; margin-bottom: 15px; border-radius: 8px; }
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; }
-        .validated { background: #28a745; color: white; }
-        .failed, .rejected { background: #dc3545; color: white; }
-        .pending { background: #ffc107; color: black; }
-        .chart-container { background: #000; border-radius: 5px; padding: 5px; border: 1px solid #444; }
-        pre { background: #0b0b0b; border: 1px solid #222; max-height: 500px; overflow: auto; padding: 10px; color: #00ff66; font-family: 'Courier New', monospace; }
+        :root { --neon: #00e5ff; --purp: #9d00ff; --bg: #0a0a0b; }
+        body { background: var(--bg); font-family: 'Consolas', monospace; max-width: 1200px; }
+        header { border-bottom: 1px solid var(--neon); padding: 1rem 0; display: flex; justify-content: space-between; align-items: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+        .stat-card { background: #16161a; padding: 1.5rem; border-radius: 8px; border: 1px solid #222; text-align: center; }
+        .stat-val { font-size: 2rem; color: var(--neon); font-weight: bold; display: block; }
+        nav { display: flex; gap: 5px; margin-bottom: 2rem; }
+        nav a { flex: 1; text-align: center; padding: 10px; background: #1a1a1d; text-decoration: none; color: #777; border-radius: 4px; }
+        nav a.active { background: var(--neon); color: #000; font-weight: bold; }
+        .panel { background: #111114; padding: 2rem; border-radius: 12px; border: 1px solid #1f1f23; }
+        table { width: 100%; border-collapse: collapse; }
+        th { color: var(--purp); border-bottom: 1px solid #333; text-align: left; padding: 10px; }
+        td { padding: 12px 10px; border-bottom: 1px solid #1a1a1a; }
+        .hypo-box { border-left: 3px solid var(--purp); background: #1a1a20; padding: 15px; margin-bottom: 15px; border-radius: 0 8px 8px 0; }
+        #log-term { background: #000; color: #0f0; padding: 15px; height: 400px; overflow-y: auto; font-size: 0.8rem; display: flex; flex-direction: column-reverse; }
     </style>
 </head>
 <body>
 
-    <header style="text-align: center; margin-top: 40px;">
-        <h1>🏛️ ARCHIMEDES <small style="color:var(--accent)">Control Panel</small></h1>
-        <p>Système de Découverte Scientifique Autonome</p>
-    </header>
-
-    <div class="grid-stats">
-        <div class="card-stat"><h2><?php echo $stats['concepts']; ?></h2>Concepts</div>
-        <div class="card-stat"><h2><?php echo $stats['relations']; ?></h2>Relations</div>
-        <div class="card-stat"><h2><?php echo $stats['hypotheses']; ?></h2>Hypothèses</div>
-        <div class="card-stat"><h2><?php echo $stats['preprints']; ?></h2>Articles</div>
+<header>
+    <h1>ARCHIMEDES <span style="color:var(--neon)">CORE</span></h1>
+    <div style="text-align:right">
+        <span style="color:var(--neon); font-weight:bold;"><?php echo date('H:i:s'); ?></span><br>
+        <small style="color:#555">v<?php echo ARCH_VERSION; ?> Active</small>
     </div>
+</header>
 
-    <div class="nav">
-        <a href="?tab=knowledge" class="btn <?php echo $tab=='knowledge'?'active':''; ?>">Graphe</a>
-        <a href="?tab=hypotheses" class="btn <?php echo $tab=='hypotheses'?'active':''; ?>">Hypothèses & Tests</a>
-        <a href="?tab=preprints" class="btn <?php echo $tab=='preprints'?'active':''; ?>">Preprints</a>
-        <a href="?tab=logs" class="btn <?php echo $tab=='logs'?'active':''; ?>">Logs</a>
-    </div>
+<div class="stats-grid">
+    <div class="stat-card"><span class="stat-val"><?php echo $stats['concepts']; ?></span>Concepts</div>
+    <div class="stat-card"><span class="stat-val"><?php echo $stats['relations']; ?></span>Liaisons</div>
+    <div class="stat-card"><span class="stat-val"><?php echo $stats['hypotheses']; ?></span>Inférences</div>
+    <div class="stat-card"><span class="stat-val"><?php echo $stats['preprints']; ?></span>Preprints</div>
+</div>
 
-    <?php if ($tab == 'knowledge'): ?>
-        <h2>🌐 Graphe de Connaissances (Dernières extractions)</h2>
+<nav>
+    <a href="?tab=network" class="<?php echo $tab == 'network' ? 'active' : ''; ?>">🌐 RÉSEAU</a>
+    <a href="?tab=hypotheses" class="<?php echo $tab == 'hypotheses' ? 'active' : ''; ?>">💡 ANALYSE</a>
+    <a href="?tab=preprints" class="<?php echo $tab == 'preprints' ? 'active' : ''; ?>">📜 ARCHIVES</a>
+    <a href="?tab=logs" class="<?php echo $tab == 'logs' ? 'active' : ''; ?>">📟 LOGS</a>
+</nav>
+
+<main class="panel">
+    <?php if ($tab == 'network'): ?>
+        <h2>🌐 Topologie du Graphe</h2>
         <table>
-            <thead>
-                <tr><th>Source (A)</th><th>Relation</th><th>Cible (B)</th><th>Confiance</th></tr>
-            </thead>
+            <thead><tr><th>Source</th><th>Vecteur</th><th>Cible</th></tr></thead>
             <tbody>
                 <?php
-                // On tente de joindre via source_id ou concept_a selon ce qui existe
-                $stmt = $db->query("SELECT c1.name as s, e.relation_type as r, c2.name as t, e.confidence as c 
-                                    FROM edges e 
-                                    JOIN concepts c1 ON (e.source_id = c1.id) 
-                                    JOIN concepts c2 ON (e.target_id = c2.id) 
-                                    ORDER BY e.id DESC LIMIT 50");
-                while ($r = $stmt->fetch(PDO::FETCH_ASSOC)): ?>
-                    <tr>
-                        <td><b><?php echo htmlspecialchars($r['s']); ?></b></td>
-                        <td><code><?php echo htmlspecialchars($r['r']); ?></code></td>
-                        <td><b><?php echo htmlspecialchars($r['t']); ?></b></td>
-                        <td><?php echo round($r['c']*100); ?>%</td>
-                    </tr>
-                <?php endwhile; ?>
+                $edges = $db->query("SELECT $colA AS a, $colB AS b FROM edges LIMIT 25")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($edges as $e): ?>
+                <tr>
+                    <td><strong style="color:var(--neon)"><?php echo htmlspecialchars($e['a'] ?? 'N/A'); ?></strong></td>
+                    <td style="color:#39ff14">➔</td>
+                    <td><strong style="color:var(--purp)"><?php echo htmlspecialchars($e['b'] ?? 'N/A'); ?></strong></td>
+                </tr>
+                <?php endforeach; ?>
             </tbody>
         </table>
 
     <?php elseif ($tab == 'hypotheses'): ?>
-        <h2>🧪 Simulations Cinétiques & Validations</h2>
+        <h2>💡 Inférences Bayesiennes</h2>
         <?php
-        // Correction de la requête pour correspondre aux colonnes réelles (concept_a / concept_c)
-        $q = "SELECT h.*, c1.name as name_a, c2.name as name_c 
-              FROM hypotheses h
-              JOIN concepts c1 ON h.concept_a = c1.id 
-              JOIN concepts c2 ON h.concept_c = c2.id 
-              ORDER BY h.id DESC";
-        
-        try {
-            $res = $db->query($q)->fetchAll(PDO::FETCH_ASSOC);
-            if (!$res) echo "<p>En attente de la Phase 3 (Raisonnement de Graphe)...</p>";
-            
-            foreach ($res as $h): 
-                $st = strtolower($h['status'] ?? 'pending');
-            ?>
-                <div class="hypo-card">
-                    <span class="badge <?php echo $st; ?>"><?php echo $st; ?></span>
-                    <strong style="font-size: 1.2em; margin-left: 10px;">
-                        <?php echo htmlspecialchars($h['name_a']); ?> ↔ <?php echo htmlspecialchars($h['name_c']); ?>
-                    </strong>
-                    <p style="color: #bbb; margin: 10px 0; font-style: italic;">
-                        <?php echo htmlspecialchars($h['mechanism'] ?? 'Aucun mécanisme décrit.'); ?>
-                    </p>
-                    
-                    <div style="display: flex; gap: 20px; align-items: center; background: #222; padding: 10px; border-radius: 5px;">
-                        <div style="flex: 1;">
-                            <small><strong>PARAMÈTRES CALCULÉS :</strong></small><br>
-                            Vmax: <code><?php echo $h['vmax']; ?></code><br>
-                            Km: <code><?php echo $h['km']; ?></code><br>
-                            Confiance: <code><?php echo round(($h['confidence']??0)*100); ?>%</code>
-                        </div>
-                        <div style="flex: 1; text-align: right;">
-                            <canvas id="chart-<?php echo $h['id']; ?>" width="220" height="90" class="chart-container"></canvas>
-                        </div>
-                    </div>
-
-                    <script>
-                    (function() {
-                        const canvas = document.getElementById('chart-<?php echo $h['id']; ?>');
-                        const ctx = canvas.getContext('2d');
-                        const Vmax = <?php echo (float)$h['vmax']; ?>;
-                        const Km = <?php echo (float)$h['km']; ?>;
-                        
-                        ctx.strokeStyle = '<?php echo ($st == "validated") ? "#00ffcc" : "#ff4444"; ?>';
-                        ctx.lineWidth = 2;
-                        ctx.beginPath();
-                        
-                        // Dessin de la courbe de Michaelis-Menten
-                        for(let x=0; x < canvas.width; x++) {
-                            let s = x / 1000; // Simule concentration substrat
-                            let v = (Vmax * s) / (Km + s);
-                            let y = canvas.height - (v / (Vmax * 1.2) * canvas.height); 
-                            if(x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                        }
-                        ctx.stroke();
-                        
-                        // Ligne de Km (Repère)
-                        ctx.setLineDash([2, 2]);
-                        ctx.strokeStyle = '#555';
-                        ctx.beginPath();
-                        ctx.moveTo(Km * 1000, 0); ctx.lineTo(Km * 1000, canvas.height);
-                        ctx.stroke();
-                    })();
-                    </script>
-                </div>
-            <?php endforeach; 
-        } catch (Exception $e) {
-            echo "<p class='badge rejected'>Erreur SQL : Les colonnes de votre table 'hypotheses' ne correspondent pas. Vérifiez archimedes.php.</p>";
-            echo "<pre>Détails : " . $e->getMessage() . "</pre>";
-        }
-        ?>
+        // On utilise les colonnes détectées dynamiquement
+        $hypo = $db->query("SELECT $hTitle AS title, $hDesc AS abstract FROM hypotheses ORDER BY id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+        if (!$hypo) echo "<p>Aucune donnée.</p>";
+        foreach ($hypo as $h): ?>
+            <div class="hypo-box">
+                <h3 style="margin:0; color:#fff;"><?php echo htmlspecialchars($h['title'] ?? 'Sans titre'); ?></h3>
+                <p style="color:#888; font-size:0.9rem; margin-top:10px;">
+                    <?php echo nl2br(htmlspecialchars($h['abstract'] ?? 'Aucun contenu disponible.')); ?>
+                </p>
+            </div>
+        <?php endforeach; ?>
 
     <?php elseif ($tab == 'preprints'): ?>
-        <h2>📜 Articles Scientifiques Validés</h2>
+        <h2>📜 Bibliothèque Preprints</h2>
         <?php
         $files = is_dir(OUTPUT_PATH) ? glob(OUTPUT_PATH . "*.md") : [];
-        if (!$files) echo "<p>Aucune découverte n'a encore été transformée en Preprint.</p>";
-        foreach ($files as $f): ?>
-            <details style="background: #1a1a1a; margin-bottom: 10px; border-radius: 5px;">
-                <summary style="padding: 15px; cursor: pointer;">📑 <?php echo basename($f); ?> (Généré le <?php echo date("d/m/Y", filemtime($f)); ?>)</summary>
-                <pre style="white-space: pre-wrap; color: #eee;"><?php echo htmlspecialchars(file_get_contents($f)); ?></pre>
+        foreach ($files as $f): 
+            $content = file_get_contents($f);
+            preg_match('/# (.*)/', $content, $m);
+            $title = $m[1] ?? basename($f);
+        ?>
+            <details style="margin-bottom:10px; border:1px solid #222;">
+                <summary style="padding:10px; cursor:pointer;">📄 <?php echo htmlspecialchars($title); ?></summary>
+                <pre style="padding:15px; background:#000; font-size:0.8rem; white-space:pre-wrap;"><?php echo htmlspecialchars($content); ?></pre>
             </details>
         <?php endforeach; ?>
 
     <?php elseif ($tab == 'logs'): ?>
-        <h2>📟 Terminal de Monitoring</h2>
-        <pre id="log-terminal"><?php 
+        <h2>📟 Terminal Système</h2>
+        <div id="log-term">
+            <?php 
             if (file_exists(LOG_PATH)) {
-                $lines = file(LOG_PATH);
-                $last_lines = array_slice($lines, -100);
-                echo htmlspecialchars(implode("", array_reverse($last_lines)));
-            } else {
-                echo "En attente de logs...";
+                $logs = array_reverse(array_slice(file(LOG_PATH), -100));
+                foreach($logs as $l) echo "<span>> " . htmlspecialchars($l) . "</span>";
             }
-        ?></pre>
-        <button onclick="window.location.reload()" class="btn">Actualiser les Logs</button>
+            ?>
+        </div>
     <?php endif; ?>
+</main>
 
-    <footer style="margin-top: 50px; opacity: 0.3; text-align: center; font-size: 0.8em;">
-        <hr>
-        <p>Archimedes Engine v5.3 | Laragon Local Environment</p>
-    </footer>
+<footer style="text-align:center; padding:2rem; font-size:0.7rem; color:#444;">
+    ARCHIMEDES v<?php echo ARCH_VERSION; ?> | DASHBOARD v<?php echo DASH_VERSION; ?>
+</footer>
+
 </body>
 </html>
