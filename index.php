@@ -1,49 +1,22 @@
 <?php
 // ============================================================
-// ARCHIMEDES v6.0 — Autonomous Scientific Discovery Engine
+// ARCHIMEDES v5.0 — Autonomous Scientific Discovery Engine
 // Architecture : Single-file PHP 8.3 | SQLite | Mistral API
 // Mode : AJAX-first (zero timeout risk) | LiteSpeed/Hostinger
-// OPTIMISATIONS : Sécurité, Transactions, cURL, Index, Cache
 // ============================================================
 
-define('ARCH_VERSION', '6.0');
+define('ARCH_VERSION', '5.0');
 define('DB_PATH', __DIR__ . '/archimedes.db');
 define('OUTPUT_PATH', __DIR__ . '/OUTPUT/');
 define('LOG_PATH', __DIR__ . '/archimedes.log');
-define('ENV_PATH', __DIR__ . '/.env');
 
-// Chargement sécurisé des clés API depuis .env ou variables d'environnement
-function loadApiKeys(): array {
-    if (file_exists(ENV_PATH)) {
-        $env = parse_ini_file(ENV_PATH);
-        if (isset($env['MISTRAL_API_KEYS'])) {
-            return explode(',', trim($env['MISTRAL_API_KEYS']));
-        }
-    }
-    $keys = getenv('MISTRAL_API_KEYS');
-    if ($keys) {
-        return explode(',', trim($keys));
-    }
-    // Fallback temporaire pour développement uniquement - À SUPPRIMER EN PROD
-    return ['placeholder_key_1', 'placeholder_key_2', 'placeholder_key_3'];
-}
 
-$MISTRAL_KEYS = loadApiKeys();
+$MISTRAL_KEYS = [
+    '5qaRTgfdgfd8Rake',
+    'o3rG1zvdqgsgsg3eHXRShytu',
+    'vEzQMKgsgsgsuXkF',
+];
 define('MISTRAL_ENDPOINT', 'https://api.mistral.ai/v1/chat/completions');
-
-// ============================================================
-// SÉCURITÉ : Sanitization et Validation des entrées
-// ============================================================
-function sanitizeInput(string $input): string {
-    return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
-}
-
-function validateAction(string $action): bool {
-    $allowed = ['init_db', 'phase1_seed', 'phase2_harvest', 'phase3_reason', 
-                'phase4_sim', 'phase5_validate', 'get_stats', 'get_graph', 
-                'get_reports', 'get_logs', 'clear_db'];
-    return in_array($action, $allowed, true);
-}
 
 // ============================================================
 // AJAX ROUTER — Toutes les opérations lourdes passent ici
@@ -55,16 +28,9 @@ if (isset($_POST['action'])) {
     set_time_limit(600);
     ini_set('memory_limit', '512M');
     
-    // Sanitization de l'action
-    $action = sanitizeInput($_POST['action']);
-    
-    if (!validateAction($action)) {
-        echo json_encode(['error' => 'Action non autorisée']);
-        exit;
-    }
-    
     try {
         $db = initDB();
+        $action = $_POST['action'];
         
         switch ($action) {
             case 'init_db':        echo json_encode(actionInitDB($db)); break;
@@ -81,14 +47,13 @@ if (isset($_POST['action'])) {
             default:               echo json_encode(['error' => 'Unknown action']);
         }
     } catch (Throwable $e) {
-        archLog("CRITICAL ERROR: " . $e->getMessage() . " | Trace: " . $e->getTraceAsString());
         echo json_encode(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
     }
     exit;
 }
 
 // ============================================================
-// DATABASE INIT — Avec transactions et index optimisés
+// DATABASE INIT
 // ============================================================
 function initDB(): PDO {
     $db = new PDO('sqlite:' . DB_PATH, null, null, [
@@ -102,154 +67,92 @@ function initDB(): PDO {
 function actionInitDB(PDO $db): array {
     if (!is_dir(OUTPUT_PATH)) mkdir(OUTPUT_PATH, 0755, true);
 
-    // Utilisation de transaction pour garantir l'intégrité
-    $db->beginTransaction();
-    try {
-        $db->exec("CREATE TABLE IF NOT EXISTS concepts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            domain TEXT,
-            mesh_term TEXT,
-            cluster_id INTEGER DEFAULT 0,
-            saturation REAL DEFAULT 0.0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )");
+    $db->exec("CREATE TABLE IF NOT EXISTS concepts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        domain TEXT,
+        mesh_term TEXT,
+        cluster_id INTEGER DEFAULT 0,
+        saturation REAL DEFAULT 0.0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
 
-        $db->exec("CREATE TABLE IF NOT EXISTS edges (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source_id INTEGER NOT NULL,
-            target_id INTEGER NOT NULL,
-            relation_type TEXT,
-            confidence REAL DEFAULT 0.5,
-            controversy_score REAL DEFAULT 0.0,
-            impact_factor REAL DEFAULT 1.0,
-            evidence_count INTEGER DEFAULT 1,
-            source_pmid TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(source_id) REFERENCES concepts(id),
-            FOREIGN KEY(target_id) REFERENCES concepts(id)
-        )");
+    $db->exec("CREATE TABLE IF NOT EXISTS edges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_id INTEGER NOT NULL,
+        target_id INTEGER NOT NULL,
+        relation_type TEXT,
+        confidence REAL DEFAULT 0.5,
+        controversy_score REAL DEFAULT 0.0,
+        impact_factor REAL DEFAULT 1.0,
+        evidence_count INTEGER DEFAULT 1,
+        source_pmid TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(source_id) REFERENCES concepts(id),
+        FOREIGN KEY(target_id) REFERENCES concepts(id)
+    )");
 
-        // INDEX OPTIMISÉS POUR LES JOINTURES COMPLEXES
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_edges_composite ON edges(source_id, target_id, confidence)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_concepts_cluster ON concepts(cluster_id)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_concepts_name ON concepts(name)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id)");
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_concepts_cluster ON concepts(cluster_id)");
 
-        $db->exec("CREATE TABLE IF NOT EXISTS articles (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pmid TEXT UNIQUE,
-            title TEXT,
-            abstract TEXT,
-            doi TEXT,
-            journal TEXT,
-            impact_factor REAL DEFAULT 1.0,
-            processed INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )");
+    $db->exec("CREATE TABLE IF NOT EXISTS articles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pmid TEXT UNIQUE,
+        title TEXT,
+        abstract TEXT,
+        doi TEXT,
+        journal TEXT,
+        impact_factor REAL DEFAULT 1.0,
+        processed INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
 
-        $db->exec("CREATE TABLE IF NOT EXISTS hypotheses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            concept_a INTEGER,
-            concept_c INTEGER,
-            path TEXT,
-            confidence REAL,
-            kinetic_valid INTEGER DEFAULT 0,
-            redteam_valid INTEGER DEFAULT 0,
-            novelty_valid INTEGER DEFAULT 0,
-            vmax REAL,
-            km REAL,
-            report_path TEXT,
-            status TEXT DEFAULT 'pending',
-            redteam_score REAL DEFAULT 0.0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )");
+    $db->exec("CREATE TABLE IF NOT EXISTS hypotheses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        concept_a INTEGER,
+        concept_c INTEGER,
+        path TEXT,
+        confidence REAL,
+        kinetic_valid INTEGER DEFAULT 0,
+        redteam_valid INTEGER DEFAULT 0,
+        novelty_valid INTEGER DEFAULT 0,
+        vmax REAL,
+        km REAL,
+        report_path TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
 
-        // INDEX POUR HYPOTHESES
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_hypotheses_status ON hypotheses(status, kinetic_valid, redteam_valid)");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_hypotheses_confidence ON hypotheses(confidence DESC)");
+    $db->exec("CREATE TABLE IF NOT EXISTS key_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key_index INTEGER,
+        used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        success INTEGER DEFAULT 1
+    )");
 
-        $db->exec("CREATE TABLE IF NOT EXISTS key_usage (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key_index INTEGER,
-            used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            success INTEGER DEFAULT 1
-        )");
-
-        // TABLE DE CACHE API POUR ÉVITER LES APPELS REDONDANTS
-        $db->exec("CREATE TABLE IF NOT EXISTS api_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cache_key TEXT UNIQUE NOT NULL,
-            response TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at DATETIME NOT NULL
-        )");
-        $db->exec("CREATE INDEX IF NOT EXISTS idx_api_cache_key ON api_cache(cache_key)");
-
-        $db->commit();
-        archLog("DB initialized OK with transactions and optimized indexes");
-        return ['status' => 'ok', 'message' => 'Database Archimedes v6.0 initialisée avec succès'];
-    } catch (Throwable $e) {
-        $db->rollBack();
-        archLog("Transaction rollback during DB init: " . $e->getMessage());
-        throw $e;
-    }
+    archLog("DB initialized OK");
+    return ['status' => 'ok', 'message' => 'Database Archimedes v5.0 initialisée avec succès'];
 }
 
 // ============================================================
-// MISTRAL API — cURL robuste avec gestion d'erreur complète
+// MISTRAL API — Rotation des clés + cURL robuste
 // ============================================================
-function callPubMed(string $url): ?array {
-    $cacheKey = 'pubmed_' . md5($url);
-    $cached = getCachedResponse($cacheKey);
-    if ($cached !== null) {
-        archLog("PubMed cache HIT for: " . substr($url, 0, 100));
-        return $cached;
-    }
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => $url,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 30,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_MAXREDIRS => 5,
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    if ($response === false || $httpCode !== 200) {
-        archLog("PubMed API error: HTTP {$httpCode} | cURL: " . ($curlError ?: 'no error'));
-        return null;
-    }
-
-    $data = json_decode($response, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        archLog("PubMed JSON decode error: " . json_last_error_msg());
-        return null;
-    }
-
-    // Cache pour 24h
-    cacheResponse($cacheKey, $data, 86400);
-    return $data;
-}
-
-function callMistral(array $keys, string $prompt, string $model = 'mistral-large-latest', int $maxTokens = 4096, string $context = ''): array {
+function callMistral(array $keys, string $prompt, string $model = 'mistral-large-2512', int $maxTokens = 4096, string $context = ''): array {
     static $keyIndex = 0;
 
     $attempts = 0;
     $lastError = '';
 
+    // LOG COMPLET : Appel entrant
     archLog("=== MISTRAL CALL START ===");
     archLog("Context: " . ($context ?: 'general'));
     archLog("Model: {$model}, MaxTokens: {$maxTokens}");
     archLog("Prompt length: " . strlen($prompt) . " chars");
+    archLog("Prompt preview (first 1000 chars): " . substr($prompt, 0, 1000));
+    if (strlen($prompt) > 1000) {
+        archLog("Prompt continued... (total " . strlen($prompt) . " chars)");
+    }
 
     while ($attempts < count($keys)) {
         $key = $keys[$keyIndex % count($keys)];
@@ -266,55 +169,53 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
             'messages'    => [['role' => 'user', 'content' => $prompt]],
         ]);
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => MISTRAL_ENDPOINT,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $key,
+        archLog("Payload JSON length: " . strlen($payload) . " bytes");
+
+        $ctx = stream_context_create([
+            'http' => [
+                'method'        => 'POST',
+                'header'        => "Content-Type: application/json\r\nAuthorization: Bearer {$key}\r\n",
+                'content'       => $payload,
+                'timeout'       => 300,
+                'ignore_errors' => true,
             ],
-            CURLOPT_TIMEOUT => 300,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_SSL_VERIFYPEER => true,
         ]);
 
-        $raw = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
+        archLog("Calling Mistral endpoint: " . MISTRAL_ENDPOINT);
+        $raw = @file_get_contents(MISTRAL_ENDPOINT, false, $ctx);
 
-        if ($raw === false || $httpCode >= 400) {
-            $lastError = $curlError ?: "HTTP {$httpCode}";
-            archLog("ERROR: cURL failed - " . $lastError);
-            
-            if ($httpCode === 429) {
-                archLog("Rate limit 429 détecté - Délai de 5 secondes");
-                sleep(5);
-            } else {
-                sleep(2);
-            }
+        if ($raw === false) {
+            $lastError = 'file_get_contents failed';
+            archLog("ERROR: file_get_contents failed");
+            archLog("HTTP response headers: " . print_r($http_response_header ?? 'no headers', true));
+            sleep(2);
             continue;
         }
 
         archLog("Raw response received (" . strlen($raw) . " bytes)");
+        archLog("Response preview (first 1000 chars): " . substr($raw, 0, 1000));
+
+        // CORRECTIF DE VISIBILITÉ A : Logging ultra-détaillé après réception réponse API
+        archLog("=== CALLMISTRALAPI DEBUG: RAW RESPONSE ===");
+        archLog("Response length: " . strlen($raw) . " bytes");
+        archLog("Response first 2000 chars: " . substr($raw, 0, 2000));
 
         $data = json_decode($raw, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             archLog("JSON decode error: " . json_last_error_msg());
-            $lastError = 'JSON decode error';
-            continue;
+            archLog("Raw response (full): " . $raw);
         }
 
         if (isset($data['error'])) {
             $lastError = $data['error']['message'] ?? 'API error';
             archLog("API ERROR: " . $lastError);
+            archLog("Full error object: " . json_encode($data['error']));
             
-            if (str_contains(strtolower($lastError), 'rate') || str_contains($lastError, '429')) {
-                sleep(5);
+            // CORRECTIF MINEUR : Gestion explicite du Rate Limit 429
+            if (str_contains($lastError, 'rate') || str_contains($lastError, 'limit') || str_contains($lastError, '429')) {
+                archLog("Rate limit 429 détecté - Délai explicite de 5 secondes avant retry");
+                sleep(5); // Délai explicite pour éviter de griller les clés
             }
             continue;
         }
@@ -322,12 +223,16 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
         if (isset($data['choices'][0]['message']['content'])) {
             $content = $data['choices'][0]['message']['content'];
             archLog("SUCCESS: Content received (" . strlen($content) . " chars)");
+            archLog("Response content preview (first 1000 chars): " . substr($content, 0, 1000));
+            archLog("Full response structure: " . json_encode($data));
             archLog("=== MISTRAL CALL END (SUCCESS) ===");
-            sleep(1);
+            sleep(1); // Rate limit: 1 req/sec
             return ['ok' => true, 'content' => $content, 'model' => $model];
         }
 
         $lastError = 'No content in response';
+        archLog("WARNING: No content in response");
+        archLog("Full response: " . json_encode($data));
         sleep(1);
     }
 
@@ -337,9 +242,16 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
 }
 
 function parseJsonFromMistral(string $raw): ?array {
+    // CORRECTIF DE VISIBILITÉ B : Logging ultra-détaillé dans parseJsonFromMistral
     archLog("=== PARSEJSONFROMMISTRAL DEBUG START ===");
+    archLog("parseJsonFromMistral: Raw input length=" . strlen($raw));
+    archLog("parseJsonFromMistral: Raw preview (first 1000 chars): " . substr($raw, 0, 1000));
+    archLog("parseJsonFromMistral: Raw full content: " . $raw);
+    
     $raw = trim($raw);
     
+    // Étape 0: Supprimer tout texte avant le premier { ou [ et après le dernier } ou ]
+    // C'est la protection ultime contre les réponses IA non conformes
     $firstBrace = strpos($raw, '{');
     $firstBracket = strpos($raw, '[');
     $lastBrace = strrpos($raw, '}');
@@ -357,60 +269,59 @@ function parseJsonFromMistral(string $raw): ?array {
         
         if ($start <= $end && $start < strlen($raw)) {
             $raw = substr($raw, $start, $end - $start + 1);
+            archLog("parseJsonFromMistral: Extracted JSON block from {$start} to {$end}");
+            archLog("parseJsonFromMistral: Extracted JSON (first 1000 chars): " . substr($raw, 0, 1000));
         }
     }
     
+    // Étape 1: SUPPRIMER les balises Markdown (au cas où elles sont à l'intérieur)
+    $rawBefore = $raw;
     $raw = preg_replace('/```json\s*/i', '', $raw);
     $raw = preg_replace('/```\s*/i', '', $raw);
     $raw = trim($raw);
-    $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
-    $raw = str_replace(['"', '"', '"'], '"', $raw);
+    if ($raw !== $rawBefore) {
+        archLog("parseJsonFromMistral: Removed markdown backticks");
+        archLog("parseJsonFromMistral: After markdown removal (first 1000 chars): " . substr($raw, 0, 1000));
+    }
     
+    // Étape 2: Supprimer les caractères de contrôle (sauf tab, newline)
+    $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
+    
+    // Étape 3: Remplacer les guillemets courbés par des guillemets droits
+    $raw = str_replace(['"', '"', '"'], '"', $raw);
+    $raw = str_replace(["'", "'", "'"], "'", $raw);
+    
+    archLog("parseJsonFromMistral: Cleaned JSON string (first 1000 chars): " . substr($raw, 0, 1000));
+    
+    // Étape 4: Tenter le parsing
     $decoded = json_decode($raw, true);
     if ($decoded !== null) {
         archLog("parseJsonFromMistral: SUCCESS on first attempt");
+        archLog("parseJsonFromMistral: Decoded data structure: " . json_encode($decoded));
         archLog("=== PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===");
         return $decoded;
     }
     
+    archLog("parseJsonFromMistral: First parse failed: " . json_last_error_msg());
+    
+    // Étape 5: Si échec, tenter de réparer les erreurs courantes
+    // Ajouter des guillemets manquants autour des keys non-quoted
     $rawRepaired = preg_replace('/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/u', '$1"$2":', $raw);
     $decoded = json_decode($rawRepaired, true);
     if ($decoded !== null) {
         archLog("parseJsonFromMistral: SUCCESS after key repair");
+        archLog("parseJsonFromMistral: Repaired JSON (first 1000 chars): " . substr($rawRepaired, 0, 1000));
+        archLog("parseJsonFromMistral: Decoded data structure: " . json_encode($decoded));
         archLog("=== PARSEJSONFROMMISTRAL DEBUG END (REPAIRED) ===");
         return $decoded;
     }
     
-    archLog("ParseJSON failed: " . json_last_error_msg());
+    // Étape 6: Logging pour debug
+    archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 500));
+    archLog("ParseJSON failed: Attempted repaired version (first 500 chars): " . substr($rawRepaired, 0, 500));
     archLog("=== PARSEJSONFROMMISTRAL DEBUG END (FAILED) ===");
     
     return null;
-}
-
-// ============================================================
-// SYSTÈME DE CACHE API
-// ============================================================
-function getCachedResponse(string $cacheKey): ?array {
-    try {
-        $db = initDB();
-        $stmt = $db->prepare("SELECT response FROM api_cache WHERE cache_key = ? AND expires_at > datetime('now')");
-        $stmt->execute([$cacheKey]);
-        $result = $stmt->fetch();
-        return $result ? json_decode($result['response'], true) : null;
-    } catch (Throwable $e) {
-        return null;
-    }
-}
-
-function cacheResponse(string $cacheKey, array $data, int $ttlSeconds): void {
-    try {
-        $db = initDB();
-        $expiresAt = date('Y-m-d H:i:s', time() + $ttlSeconds);
-        $stmt = $db->prepare("INSERT OR REPLACE INTO api_cache (cache_key, response, expires_at) VALUES (?, ?, ?)");
-        $stmt->execute([$cacheKey, json_encode($data), $expiresAt]);
-    } catch (Throwable $e) {
-        archLog("Cache write error: " . $e->getMessage());
-    }
 }
 
 function archLog(string $msg): void {
@@ -419,14 +330,16 @@ function archLog(string $msg): void {
 }
 
 // ============================================================
-// PHASE 1 — Ontologie Auto-Génératrice (avec transactions)
+// PHASE 1 — Ontologie Auto-Génératrice
 // ============================================================
 function actionPhase1Seed(PDO $db, array $keys): array {
+    // Analyse du vide informationnel
     $count = $db->query("SELECT COUNT(*) as c FROM concepts")->fetch()['c'];
     $clusters = $db->query("SELECT cluster_id, COUNT(*) as cnt FROM concepts GROUP BY cluster_id")->fetchAll();
 
     $gaps = [];
     if (count($clusters) >= 2) {
+        // Trouver clusters sans edges inter-cluster
         $stmt = $db->query("
             SELECT c1.cluster_id as ca, c2.cluster_id as cb, COUNT(e.id) as links
             FROM concepts c1
@@ -444,7 +357,7 @@ function actionPhase1Seed(PDO $db, array $keys): array {
         : "Clusters isolés détectés : " . json_encode($gaps);
 
     $prompt = <<<PROMPT
-Tu es ARCHIMEDES v6.0, moteur de découverte scientifique autonome.
+Tu es ARCHIMEDES v5.0, moteur de découverte scientifique autonome.
 
 MISSION PHASE 1 — ONTOLOGIE AUTO-GÉNÉRATRICE :
 État de la base : {$count} concepts, {$gapDesc}
@@ -473,674 +386,1857 @@ FORMAT JSON OBLIGATOIRE :
 }
 PROMPT;
 
-    $result = callMistral($keys, $prompt, 'mistral-large-latest', 4096, 'phase1_ontology');
-    
+    $result = callMistral($keys, $prompt, 'mistral-large-2512', 4096);
+
     if (!$result['ok']) {
-        return ['status' => 'error', 'message' => 'Échec appel Mistral: ' . ($result['error'] ?? 'inconnu')];
+        return ['status' => 'error', 'message' => $result['error']];
     }
 
     $data = parseJsonFromMistral($result['content']);
     if (!$data || !isset($data['concepts'])) {
-        return ['status' => 'error', 'message' => 'Parsing JSON échoué'];
+        return ['status' => 'error', 'message' => 'Parse JSON échoué', 'raw' => substr($result['content'], 0, 500)];
     }
 
-    // TRANSACTION POUR INSERTION DES CONCEPTS
-    $db->beginTransaction();
-    try {
-        $inserted = 0;
-        $stmt = $db->prepare("INSERT OR IGNORE INTO concepts (name, mesh_term, domain, cluster_id, saturation) VALUES (?, ?, ?, ?, ?)");
-        
-        foreach ($data['concepts'] as $concept) {
-            $stmt->execute([
-                $concept['name'],
-                $concept['mesh_term'] ?? $concept['name'],
-                $concept['domain'] ?? 'unknown',
-                $concept['cluster_id'] ?? 0,
-                $data['entropy_score'] ?? 0.5
-            ]);
-            $inserted += $db->lastInsertId() ? 1 : 0;
+    $inserted = 0;
+    $stmt = $db->prepare("INSERT OR IGNORE INTO concepts (name, domain, mesh_term, cluster_id) VALUES (?, ?, ?, ?)");
+    foreach ($data['concepts'] as $c) {
+        if (isset($c['name'])) {
+            $stmt->execute([$c['name'], $c['domain'] ?? 'Unknown', $c['mesh_term'] ?? $c['name'], $c['cluster_id'] ?? 0]);
+            if ($db->lastInsertId()) $inserted++;
         }
-
-        $db->commit();
-        archLog("Phase 1: {$inserted} concepts insérés avec succès");
-        
-        return [
-            'status' => 'ok',
-            'concepts_inserted' => $inserted,
-            'total_concepts' => $db->query("SELECT COUNT(*) FROM concepts")->fetchColumn(),
-            'entropy_score' => $data['entropy_score'] ?? 0.5,
-            'analysis' => $data['analysis'] ?? ''
-        ];
-    } catch (Throwable $e) {
-        $db->rollBack();
-        archLog("Phase 1 transaction rollback: " . $e->getMessage());
-        return ['status' => 'error', 'message' => 'Erreur insertion: ' . $e->getMessage()];
-    }
-}
-
-// ============================================================
-// PHASE 2 — Harvest PubMed (avec cURL et cache)
-// ============================================================
-function actionPhase2Harvest(PDO $db, array $keys): array {
-    $concepts = $db->query("SELECT id, name, mesh_term FROM concepts ORDER BY RANDOM() LIMIT 10")->fetchAll();
-    
-    if (empty($concepts)) {
-        return ['status' => 'error', 'message' => 'Aucun concept pour démarrer le harvest'];
     }
 
-    $articlesFound = 0;
-    $edgesCreated = 0;
+    archLog("Phase1: {$inserted} concepts insérés. Entropy: " . ($data['entropy_score'] ?? '?'));
 
-    foreach ($concepts as $concept) {
-        $query = urlencode($concept['mesh_term'] ?? $concept['name']);
-        $url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$query}&retmax=5&retmode=json";
-        
-        $result = callPubMed($url);
-        if (!$result || !isset($result['esearchresult']['idlist'])) {
-            continue;
-        }
-
-        foreach ($result['esearchresult']['idlist'] as $pmid) {
-            $fetchUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={$pmid}&retmode=json";
-            $summary = callPubMed($fetchUrl);
-            
-            if (!$summary || !isset($summary['result'][$pmid])) {
-                continue;
-            }
-
-            $article = $summary['result'][$pmid];
-            
-            // TRANSACTION POUR CHAQUE ARTICLE
-            $db->beginTransaction();
-            try {
-                $stmt = $db->prepare("INSERT OR IGNORE INTO articles (pmid, title, abstract, journal) VALUES (?, ?, ?, ?)");
-                $stmt->execute([
-                    $pmid,
-                    $article['title'] ?? '',
-                    $article['fulljournalname'] ?? '',
-                    $article['fulljournalname'] ?? ''
-                ]);
-
-                if ($db->lastInsertId()) {
-                    $articlesFound++;
-                }
-
-                // Création d'edges basés sur la co-occurrence
-                $edgeStmt = $db->prepare("INSERT INTO edges (source_id, target_id, relation_type, confidence, source_pmid) VALUES (?, ?, ?, ?, ?)");
-                
-                foreach ($concepts as $otherConcept) {
-                    if ($otherConcept['id'] === $concept['id']) continue;
-                    
-                    if (stripos($article['title'] ?? '', $otherConcept['name']) !== false) {
-                        $edgeStmt->execute([
-                            $concept['id'],
-                            $otherConcept['id'],
-                            'co_occurrence',
-                            0.7,
-                            $pmid
-                        ]);
-                        $edgesCreated++;
-                    }
-                }
-
-                $db->commit();
-            } catch (Throwable $e) {
-                $db->rollBack();
-                archLog("Phase 2 article rollback: " . $e->getMessage());
-            }
-        }
-
-        usleep(500000); // 500ms entre les requêtes
-    }
-
-    archLog("Phase 2: {$articlesFound} articles, {$edgesCreated} edges créés");
-    
     return [
-        'status' => 'ok',
-        'articles_found' => $articlesFound,
-        'edges_created' => $edgesCreated,
-        'total_articles' => $db->query("SELECT COUNT(*) FROM articles")->fetchColumn(),
-        'total_edges' => $db->query("SELECT COUNT(*) FROM edges")->fetchColumn()
+        'status'    => 'ok',
+        'phase'     => 1,
+        'inserted'  => $inserted,
+        'total'     => $db->query("SELECT COUNT(*) as c FROM concepts")->fetch()['c'],
+        'analysis'  => $data['analysis'] ?? '',
+        'entropy'   => $data['entropy_score'] ?? 0,
+        'model'     => $result['model'],
     ];
 }
 
 // ============================================================
-// PHASE 3 — Reasoning & Hypothesis Generation
+// PHASE 2 — Moissonneur Deep-Scan
 // ============================================================
-function actionPhase3Reason(PDO $db, array $keys): array {
-    // Recherche de chemins non triviaux entre concepts
-    $paths = $db->query("
-        SELECT c1.id as start_id, c1.name as start_name, 
-               c2.id as end_id, c2.name as end_name,
-               GROUP_CONCAT(c3.name) as intermediate,
-               COUNT(*) as path_count
-        FROM concepts c1
-        JOIN edges e1 ON e1.source_id = c1.id
-        JOIN concepts c3 ON c3.id = e1.target_id
-        JOIN edges e2 ON e2.source_id = c3.id
-        JOIN concepts c2 ON c2.id = e2.target_id
-        WHERE c1.id != c2.id AND c1.cluster_id != c2.cluster_id
-        GROUP BY c1.id, c2.id
-        HAVING path_count >= 2
-        ORDER BY path_count DESC
-        LIMIT 25
-    ")->fetchAll();
-
-    if (empty($paths)) {
-        return ['status' => 'warning', 'message' => 'Aucun chemin inter-cluster trouvé'];
+function actionPhase2Harvest(PDO $db, array $keys): array {
+    // Prendre les concepts les moins saturés
+    $concepts = $db->query("SELECT * FROM concepts ORDER BY saturation ASC LIMIT 3")->fetchAll();
+    if (empty($concepts)) {
+        return ['status' => 'error', 'message' => 'Aucun concept à traiter. Lancez Phase 1 d\'abord.'];
     }
 
-    $hypothesesGenerated = 0;
+    $allArticles = [];
 
-    foreach ($paths as $path) {
-        $prompt = <<<PROMPT
-Tu es ARCHIMEDES v6.0, moteur de découverte scientifique.
+    foreach ($concepts as $concept) {
+        // Requête PubMed
+        $term = urlencode($concept['mesh_term'] ?? $concept['name']);
+        $pubmedUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$term}[MeSH]&retmax=5&retmode=json&sort=relevance";
+        $raw = @file_get_contents($pubmedUrl);
 
-DONNÉES:
-- Concept A: {$path['start_name']} (cluster source)
-- Concept C: {$path['end_name']} (cluster cible)
-- Chemin intermédiaire: {$path['intermediate']}
-- Nombre de connexions: {$path['path_count']}
+        $pmids = [];
+        if ($raw) {
+            $pd = json_decode($raw, true);
+            $pmids = $pd['esearchresult']['idlist'] ?? [];
+        }
 
-TÂCHE:
-Génère une hypothèse scientifique novatrice reliant A et C via le chemin intermédiaire.
-L'hypothèse doit être testable, falsifiable, et potentiellement révolutionnaire.
+        foreach (array_slice($pmids, 0, 3) as $pmid) {
+            $detailUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={$pmid}&retmode=json";
+            $detailRaw = @file_get_contents($detailUrl);
+            if (!$detailRaw) continue;
 
-FORMAT JSON OBLIGATOIRE :
+            $detail = json_decode($detailRaw, true);
+            $art = $detail['result'][$pmid] ?? null;
+            if (!$art) continue;
+
+            $title    = $art['title'] ?? 'Unknown';
+            $journal  = $art['source'] ?? 'Unknown';
+            $doi      = '';
+            foreach (($art['articleids'] ?? []) as $aid) {
+                if ($aid['idtype'] === 'doi') { $doi = $aid['value']; break; }
+            }
+
+            $stmt = $db->prepare("INSERT OR IGNORE INTO articles (pmid, title, journal, doi) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$pmid, $title, $journal, $doi]);
+
+            $allArticles[] = ['pmid' => $pmid, 'title' => $title, 'concept' => $concept['name']];
+            sleep(1);
+        }
+
+        // Analyse sémantique avec Mistral
+        if (!empty($allArticles)) {
+            $articleList = implode("\n", array_map(fn($a) => "- PMID:{$a['pmid']} | {$a['title']}", $allArticles));
+
+            $prompt = <<<PROMPT
+Tu es ARCHIMEDES v5.0, extracteur de relations scientifiques.
+
+Analyse ces articles sur "{$concept['name']}" et extrait des triplets de relations biologiques/scientifiques avec données quantifiées.
+
+ARTICLES :
+{$articleList}
+
+RÈGLES :
+- Extrait des valeurs numériques (IC50, Km, constantes de liaison) quand disponibles
+- Gère les contradictions avec un Score de Controverse [0-1]
+- Chaque relation a un score de confiance [0-1]
+- Termes en anglais MeSH exclusivement
+- Réponse JSON UNIQUEMENT
+
+FORMAT :
 {
-  "hypothesis": "description claire de l'hypothèse",
-  "mechanism": "mécanisme biologique/physique proposé",
-  "testable_prediction": "prédiction testable expérimentalement",
-  "confidence": 0.75,
-  "novelty_score": 0.9
+  "triplets": [
+    {
+      "source": "concept_source",
+      "target": "concept_target",
+      "relation": "activates|inhibits|binds|regulates|correlates",
+      "confidence": 0.85,
+      "controversy": 0.1,
+      "ic50": null,
+      "km": null,
+      "pmid": "12345678"
+    }
+  ],
+  "dark_data": "résultats secondaires ou accidentels notables"
 }
 PROMPT;
 
-        $result = callMistral($keys, $prompt, 'mistral-large-latest', 2048, 'phase3_reasoning');
-        
-        if (!$result['ok']) continue;
+            $result = callMistral($keys, $prompt, 'codestral-2508', 3000);
 
-        $data = parseJsonFromMistral($result['content']);
-        if (!$data) continue;
+            if ($result['ok']) {
+                $data = parseJsonFromMistral($result['content']);
+                if ($data && isset($data['triplets'])) {
+                    $conceptStmt = $db->prepare("INSERT OR IGNORE INTO concepts (name, domain, mesh_term, cluster_id) VALUES (?, ?, ?, ?)");
+                    $edgeStmt = $db->prepare("
+                        INSERT INTO edges (source_id, target_id, relation_type, confidence, controversy_score, source_pmid)
+                        SELECT c1.id, c2.id, ?, ?, ?, ?
+                        FROM concepts c1, concepts c2
+                        WHERE c1.name = ? AND c2.name = ?
+                    ");
 
-        $db->beginTransaction();
-        try {
-            $stmt = $db->prepare("
-                INSERT INTO hypotheses (concept_a, concept_c, path, confidence, kinetic_valid, redteam_valid, novelty_valid, status)
-                VALUES (?, ?, ?, ?, 0, 0, 0, 'pending')
-            ");
-            $stmt->execute([
-                $path['start_id'],
-                $path['end_id'],
-                json_encode(['intermediate' => $path['intermediate'], 'path_count' => $path['path_count']]),
-                $data['confidence'] ?? 0.5
-            ]);
-
-            if ($db->lastInsertId()) {
-                $hypothesesGenerated++;
+                    foreach ($data['triplets'] as $t) {
+                        if (!isset($t['source'], $t['target'])) continue;
+                        $conceptStmt->execute([$t['source'], 'derived', $t['source'], $concept['cluster_id'] ?? 0]);
+                        $conceptStmt->execute([$t['target'], 'derived', $t['target'], $concept['cluster_id'] ?? 0]);
+                        $edgeStmt->execute([
+                            $t['relation'] ?? 'correlates',
+                            $t['confidence'] ?? 0.5,
+                            $t['controversy'] ?? 0.0,
+                            $t['pmid'] ?? '',
+                            $t['source'],
+                            $t['target'],
+                        ]);
+                    }
+                }
             }
-            $db->commit();
-        } catch (Throwable $e) {
-            $db->rollBack();
-            archLog("Phase 3 hypothesis rollback: " . $e->getMessage());
         }
+
+        // Mise à jour saturation
+        $db->prepare("UPDATE concepts SET saturation = saturation + 0.2 WHERE id = ?")->execute([$concept['id']]);
+        sleep(1);
     }
 
-    archLog("Phase 3: {$hypothesesGenerated} hypothèses générées");
-    
+    $totalEdges = $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c'];
+    archLog("Phase2: " . count($allArticles) . " articles récoltés, {$totalEdges} edges total");
+
     return [
-        'status' => 'ok',
-        'paths_analyzed' => count($paths),
-        'hypotheses_generated' => $hypothesesGenerated,
-        'total_hypotheses' => $db->query("SELECT COUNT(*) FROM hypotheses")->fetchColumn()
+        'status'       => 'ok',
+        'phase'        => 2,
+        'articles'     => count($allArticles),
+        'total_edges'  => $totalEdges,
+        'concepts_done'=> array_column($concepts, 'name'),
     ];
 }
 
 // ============================================================
-// PHASE 4 — Simulation & Red Team (avec scoring graduel)
+// PHASE 3 — Graph Reasoning 4ème degré
 // ============================================================
-function actionPhase4Simulate(PDO $db, array $keys): array {
-    $hypotheses = $db->query("
-        SELECT h.*, c1.name as concept_a_name, c2.name as concept_c_name
-        FROM hypotheses h
-        JOIN concepts c1 ON c1.id = h.concept_a
-        JOIN concepts c2 ON c2.id = h.concept_c
-        WHERE h.status = 'pending' AND h.kinetic_valid = 0
-        ORDER BY h.confidence DESC
+function actionPhase3Reason(PDO $db, array $keys): array {
+    // CORRECTIF CRITIQUE : Seuils abaissés pour permettre génération avec peu d'edges
+    // SQL Multi-niveaux : chemins A→B→C→D
+    $paths = $db->query("
+        SELECT
+            ca.name as A, ea.relation_type as rel_AB, cb.name as B,
+            eb.relation_type as rel_BC, cc.name as C,
+            ec.relation_type as rel_CD, cd.name as D,
+            (ea.confidence * eb.confidence * ec.confidence) as path_strength,
+            (ea.impact_factor + eb.impact_factor + ec.impact_factor) / 3 as avg_impact
+        FROM edges ea
+        JOIN edges eb ON ea.target_id = eb.source_id
+        JOIN edges ec ON eb.target_id = ec.source_id
+        JOIN concepts ca ON ea.source_id = ca.id
+        JOIN concepts cb ON ea.target_id = cb.id
+        JOIN concepts cc ON eb.target_id = cc.id
+        JOIN concepts cd ON ec.target_id = cd.id
+        WHERE ca.id != cd.id
+          AND ea.confidence > 0.3
+          AND eb.confidence > 0.3
+          AND ec.confidence > 0.3
+        ORDER BY path_strength DESC
         LIMIT 10
     ")->fetchAll();
 
-    if (empty($hypotheses)) {
-        return ['status' => 'warning', 'message' => 'Aucune hypothèse en attente de simulation'];
+    // Chemins A→B→C (3 degrés aussi)
+    $paths3 = $db->query("
+        SELECT
+            ca.name as A, ea.relation_type as rel_AB, cb.name as B,
+            eb.relation_type as rel_BC, cc.name as C,
+            (ea.confidence * eb.confidence) as path_strength,
+            ca.id as source_concept_id, cc.id as target_concept_id
+        FROM edges ea
+        JOIN edges eb ON ea.target_id = eb.source_id
+        JOIN concepts ca ON ea.source_id = ca.id
+        JOIN concepts cb ON ea.target_id = cb.id
+        JOIN concepts cc ON eb.target_id = cc.id
+        WHERE ca.id != cc.id
+          AND ea.confidence > 0.4
+          AND eb.confidence > 0.4
+        ORDER BY path_strength DESC
+        LIMIT 15
+    ")->fetchAll();
+
+    if (empty($paths3) && empty($paths)) {
+        return ['status' => 'warn', 'message' => 'Pas assez d\'edges pour le raisonnement. Lancez Phase 2.', 'edges_count' => $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c']];
     }
 
-    $simulated = 0;
-    $validated = 0;
+    // LOG ULTRA-DETAILÉ : Récapitulatif avant génération
+    archLog("Phase3: Edge count = " . $db->query("SELECT COUNT(*) as c FROM edges")->fetch()['c']);
+    archLog("Phase3: Paths 4-degrees found = " . count($paths));
+    archLog("Phase3: Paths 3-degrees found = " . count($paths3));
+    archLog("Phase3: Total paths for hypothesis generation = " . count(array_merge($paths3, $paths)));
 
-    foreach ($hypotheses as $hyp) {
-        // Simulation cinétique
-        $vmax = rand(50, 500) / 100;
-        $km = rand(10, 200) / 100;
-        $kineticValid = ($vmax > 0.3 && $km < 1.5) ? 1 : 0;
+    $pathsDesc = json_encode(array_merge($paths3, $paths), JSON_PRETTY_PRINT);
 
-        // Red Team avec SCORING GRADUEL au lieu de binaire
-        $prompt = <<<PROMPT
-Tu es le RED TEAM d'ARCHIMEDES v6.0, critique scientifique impitoyable.
+    $prompt = <<<PROMPT
+Tu es ARCHIMEDES v5.0, moteur de raisonnement logique.
 
-HYPOTHÈSE À ÉVALUER:
-- Relation: {$hyp['concept_a_name']} → {$hyp['concept_c_name']}
-- Confiance initiale: {$hyp['confidence']}
+PHASE 3 — INFÉRENCE DE TRANSITIVITÉ :
 
-TÂCHE:
-Évalue cette hypothèse sur 5 critères (0-10 chacun):
-1. Plausibilité biologique/physique
-2. Falsifiabilité
-3. Originalité
-4. Impact potentiel
-5. Cohérence avec littérature existante
+Chemins détectés dans le graphe de connaissances :
+{$pathsDesc}
 
-FORMAT JSON OBLIGATOIRE :
+MISSION :
+1. Applique la logique de transitivité : Si A+ B et B− C, alors A devrait inhiber C
+2. Calcule P(A|C) pour chaque chemin multi-degrés
+3. Détecte les clusters isolés sans lien vers des pathologies
+4. Identifie les 3 hypothèses les plus prometteuses (chemin le plus fort + inattendues)
+
+⚠️ CONTRAINTES STRICTES DE FORMAT ⚠️
+- Réponds UNIQUEMENT avec du JSON brut, SANS AUCUN texte avant ou après
+- PAS de balises markdown (pas de ```json ni ```)
+- PAS d'explications, PAS de commentaires, PAS de texte introductif ou conclusif
+- Le premier caractère de ta réponse DOIT être { ou [
+- Le dernier caractère de ta réponse DOIT être } ou ]
+- Si tu ajoutes du texte autour, ton analyse sera PERDUE
+
+FORMAT DE RÉPONSE OBLIGATOIRE (JSON brut uniquement) :
 {
-  "scores": {"plausibility": 7, "falsifiability": 8, "originality": 9, "impact": 6, "coherence": 7},
-  "total_score": 37,
-  "max_score": 50,
-  "normalized_score": 0.74,
-  "verdict": "promising",
-  "critique": "analyse détaillée des forces et faiblesses"
+  "hypotheses": [
+    {
+      "concept_a": "nom",
+      "concept_c": "nom",
+      "path": "A→B→C ou A→B→C→D",
+      "transitive_logic": "explication",
+      "probability": 0.75,
+      "confidence": 0.80,
+      "novelty_hint": "pourquoi c'est potentiellement nouveau",
+      "vmax_estimate": 1.5,
+      "km_estimate": 0.002
+    }
+  ],
+  "isolated_clusters": ["liste des clusters sans pathologie connue"],
+  "reasoning_summary": "synthèse"
 }
 PROMPT;
 
-        $result = callMistral($keys, $prompt, 'mistral-large-latest', 2048, 'phase4_redteam');
-        
-        $redteamScore = 0.0;
-        $redteamValid = 0;
-        
-        if ($result['ok']) {
-            $data = parseJsonFromMistral($result['content']);
-            if ($data && isset($data['normalized_score'])) {
-                $redteamScore = $data['normalized_score'];
-                // Validation si score > 0.6 (au lieu de binaire strict)
-                $redteamValid = ($redteamScore > 0.6) ? 1 : 0;
-                if ($redteamValid) $validated++;
-            }
-        }
+    $result = callMistral($keys, $prompt, 'mistral-large-2512', 4096);
+    if (!$result['ok']) return ['status' => 'error', 'message' => $result['error']];
 
-        $db->beginTransaction();
-        try {
-            $stmt = $db->prepare("
-                UPDATE hypotheses 
-                SET kinetic_valid = ?, vmax = ?, km = ?, redteam_valid = ?, redteam_score = ?, status = ?
-                WHERE id = ?
-            ");
-            
-            $newStatus = 'pending_validation';
-            if ($kineticValid && $redteamValid) {
-                $newStatus = 'validated';
-            } elseif ($kineticValid && $redteamScore > 0.4) {
-                $newStatus = 'promising'; // Nouveau statut pour hypothèses prometteuses
-            }
-
-            $stmt->execute([
-                $kineticValid,
-                $vmax,
-                $km,
-                $redteamValid,
-                $redteamScore,
-                $newStatus,
-                $hyp['id']
-            ]);
-
-            $simulated++;
-            $db->commit();
-        } catch (Throwable $e) {
-            $db->rollBack();
-            archLog("Phase 4 simulation rollback: " . $e->getMessage());
-        }
+    $data = parseJsonFromMistral($result['content']);
+    if (!$data || !isset($data['hypotheses'])) {
+        return ['status' => 'error', 'message' => 'Parse failed', 'raw' => substr($result['content'], 0, 500)];
     }
 
-    archLog("Phase 4: {$simulated} simulées, {$validated} validées");
-    
+    $stmt = $db->prepare("
+        INSERT INTO hypotheses (concept_a, concept_c, path, confidence, vmax, km, status)
+        SELECT c1.id, c2.id, ?, ?, ?, ?, 'pending'
+        FROM concepts c1, concepts c2
+        WHERE c1.name = ? AND c2.name = ?
+    ");
+
+    $inserted = 0;
+    foreach ($data['hypotheses'] as $h) {
+        if (!isset($h['concept_a'], $h['concept_c'])) continue;
+        $stmt->execute([
+            $h['path'] ?? '',
+            $h['confidence'] ?? 0.5,
+            $h['vmax_estimate'] ?? 1.0,
+            $h['km_estimate'] ?? 0.001,
+            $h['concept_a'],
+            $h['concept_c'],
+        ]);
+        if ($db->lastInsertId()) $inserted++;
+    }
+
+    archLog("Phase3: {$inserted} hypothèses générées");
+
     return [
-        'status' => 'ok',
-        'hypotheses_simulated' => $simulated,
-        'hypotheses_validated' => $validated,
-        'hypotheses_promising' => $db->query("SELECT COUNT(*) FROM hypotheses WHERE status='promising'")->fetchColumn(),
-        'total_hypotheses' => $db->query("SELECT COUNT(*) FROM hypotheses")->fetchColumn()
+        'status'    => 'ok',
+        'phase'     => 3,
+        'hypotheses'=> count($data['hypotheses']),
+        'inserted'  => $inserted,
+        'summary'   => $data['reasoning_summary'] ?? '',
+        'isolated'  => $data['isolated_clusters'] ?? [],
     ];
 }
 
 // ============================================================
-// PHASE 5 — Validation Finale & Rapport
+// PHASE 4 — Lab-in-the-Loop : Cinétique + Red Team
 // ============================================================
-function actionPhase5Validate(PDO $db, array $keys): array {
-    // Inclure maintenant les hypothèses 'promising' en plus de 'validated'
+function actionPhase4Simulate(PDO $db, array $keys): array {
     $hypotheses = $db->query("
-        SELECT h.*, c1.name as concept_a_name, c2.name as concept_c_name
+        SELECT h.*, ca.name as name_a, cc.name as name_c
         FROM hypotheses h
-        JOIN concepts c1 ON c1.id = h.concept_a
-        JOIN concepts c2 ON c2.id = h.concept_c
-        WHERE h.status IN ('validated', 'promising')
-        ORDER BY h.redteam_score DESC, h.confidence DESC
-        LIMIT 5
+        JOIN concepts ca ON h.concept_a = ca.id
+        JOIN concepts cc ON h.concept_c = cc.id
+        WHERE h.status = 'pending'
+        LIMIT 3
     ")->fetchAll();
 
     if (empty($hypotheses)) {
-        return ['status' => 'warning', 'message' => 'Aucune hypothèse validée ou prometteuse disponible'];
+        return ['status' => 'warn', 'message' => 'Aucune hypothèse en attente. Lancez Phase 3.'];
     }
 
-    $reportsGenerated = 0;
+    $results = [];
 
-    foreach ($hypotheses as $hyp) {
+    foreach ($hypotheses as $h) {
+        archLog("=== PHASE4: Processing hypothesis ID={$h['id']} {$h['name_a']} -> {$h['name_c']} ===");
+        
+        // Simulation Michaelis-Menten
+        $vMax = (float)($h['vmax'] ?? 1.0);
+        $km   = (float)($h['km'] ?? 0.001);
+        if ($km <= 0) $km = 0.001;
+
+        archLog("Kinetic params: Vmax={$vMax}, Km={$km}");
+
+        $substrates = [0.0001, 0.001, 0.01, 0.1, 1.0]; // concentrations physiologiques
+        $velocities = [];
+        $isRealistic = false;
+
+        foreach ($substrates as $s) {
+            $v = ($vMax * $s) / ($km + $s);
+            $velocities[] = round($v, 6);
+            // Réaliste si vitesse significative à faible concentration (< 0.01 M)
+            if ($s <= 0.01 && $v > ($vMax * 0.1)) $isRealistic = true;
+        }
+
+        archLog("Velocities: " . json_encode($velocities));
+        archLog("Is realistic: " . ($isRealistic ? 'YES' : 'NO'));
+
+        // Monte Carlo : 100 itérations avec variation ±20%
+        $mcResults = [];
+        for ($i = 0; $i < 100; $i++) {
+            $vMaxVar = $vMax * (1 + (mt_rand(-20, 20) / 100));
+            $kmVar   = $km * (1 + (mt_rand(-20, 20) / 100));
+            $conc    = 0.001;
+            $mcResults[] = ($vMaxVar * $conc) / ($kmVar + $conc);
+        }
+        sort($mcResults);
+        $mcMean   = array_sum($mcResults) / count($mcResults);
+        $mcStdDev = sqrt(array_sum(array_map(fn($x) => pow($x - $mcMean, 2), $mcResults)) / count($mcResults));
+        $mcCV     = $mcStdDev / ($mcMean ?: 1);
+        $mcStable = $mcCV < 0.3; // CV < 30% = stable
+
+        archLog("Monte Carlo: mean={$mcMean}, stddev={$mcStdDev}, CV={$mcCV}, stable=" . ($mcStable ? 'YES' : 'NO'));
+
+        // Agent Sceptique "Red Team"
         $prompt = <<<PROMPT
-Tu es ARCHIMEDES v6.0, rédacteur de rapports scientifiques.
+Tu es l'AGENT SCEPTIQUE d'ARCHIMEDES v5.0. Ta mission est de DÉTRUIRE cette hypothèse.
 
-GÉNÈRE UN RAPPORT COMPLET POUR:
-- Hypothèse: {$hyp['concept_a_name']} → {$hyp['concept_c_name']}
-- Score Red Team: {$hyp['redteam_score']}
-- Paramètres cinétiques: Vmax={$hyp['vmax']}, Km={$hyp['km']}
+HYPOTHÈSE À DÉTRUIRE :
+- Concept A : {$h['name_a']}
+- Concept C : {$h['name_c']}
+- Chemin : {$h['path']}
+- Confiance calculée : {$h['confidence']}
+- Paramètres cinétiques : Vmax={$vMax}, Km={$km}
+- Simulation cinétique réaliste : " . ($isRealistic ? 'OUI' : 'NON') . "
+- Monte Carlo stable : " . ($mcStable ? 'OUI' : 'NON') . " (CV=" . round($mcCV, 3) . ")
 
-STRUCTURE DU RAPPORT:
-1. Résumé exécutif (100 mots)
-2. Contexte scientifique
-3. Mécanisme proposé
-4. Protocole expérimental détaillé
-5. Risques et limitations
-6. Impact potentiel
+CHERCHE ACTIVEMENT :
+1. La molécule peut-elle passer la barrière hémato-encéphalique ?
+2. Y a-t-il une toxicité connue aux concentrations nécessaires ?
+3. Les concentrations Km sont-elles biologiquement impossibles ?
+4. Des études récentes invalident-elles ce mécanisme ?
+5. Y a-t-il des effets off-target dangereux ?
 
-FORMAT JSON:
+Réponse JSON UNIQUEMENT :
 {
-  "title": "titre du rapport",
-  "executive_summary": "...",
-  "scientific_context": "...",
-  "proposed_mechanism": "...",
-  "experimental_protocol": ["étape 1", "étape 2"],
-  "risks": ["risque 1", "risque 2"],
-  "potential_impact": "...",
-  "recommendation": "pursue/investigate/monitor"
+  "verdict": "VALID|INVALID|UNCERTAIN",
+  "barriers": ["liste des barrières physiques"],
+  "toxicity_risk": "LOW|MEDIUM|HIGH",
+  "fatal_flaw": "si INVALID, le flaw fatal",
+  "confidence_penalty": 0.2,
+  "recommendation": "PROCEED|ABORT|REVISE"
 }
 PROMPT;
 
-        $result = callMistral($keys, $prompt, 'mistral-large-latest', 4096, 'phase5_report');
-        
-        if (!$result['ok']) continue;
-
-        $data = parseJsonFromMistral($result['content']);
-        if (!$data) continue;
-
-        $reportPath = OUTPUT_PATH . "report_{$hyp['id']}_" . date('Ymd_His') . ".json";
-        file_put_contents($reportPath, json_encode($data, JSON_PRETTY_PRINT));
-
-        $db->beginTransaction();
-        try {
-            $stmt = $db->prepare("UPDATE hypotheses SET report_path = ?, status = 'reported' WHERE id = ?");
-            $stmt->execute([$reportPath, $hyp['id']]);
-            $reportsGenerated++;
-            $db->commit();
-        } catch (Throwable $e) {
-            $db->rollBack();
-            archLog("Phase 5 report rollback: " . $e->getMessage());
+        archLog("Calling Red Team agent...");
+        $redTeam = callMistral($keys, $prompt, 'mistral-large-2512', 2048, 'phase4_redteam');
+        $rtData = null;
+        if ($redTeam['ok']) {
+            $rtData = parseJsonFromMistral($redTeam['content']);
+            archLog("Red Team response parsed: " . json_encode($rtData));
+        } else {
+            archLog("Red Team call failed: " . ($redTeam['error'] ?? 'unknown error'));
         }
+
+        $kineticValid = $isRealistic && $mcStable ? 1 : 0;
+        $redTeamValid = ($rtData && ($rtData['verdict'] ?? '') !== 'INVALID') ? 1 : 0;
+
+        archLog("Validation results: kinetic_valid={$kineticValid}, redteam_valid={$redTeamValid}");
+
+        // CORRECTIF MAJEUR : Logique OR avec garde-fou (au lieu de AND)
+        // On valide si AU MOINS un des deux critères est bon, sauf si Red Team dit clairement INVALID
+        $shouldValidate = false;
+        
+        // Si la cinétique est bonne ET que le Red Team n'a pas dit INVALID, on valide
+        if ($kineticValid && (!$rtData || ($rtData['verdict'] ?? '') !== 'INVALID')) {
+            $shouldValidate = true;
+            archLog("Phase4: Validé par cinétique OK + Red Team non-INVALID");
+        }
+        // OU si le Red Team dit VALID/UNCERTAIN même si cinétique moyenne
+        elseif ($redTeamValid && (!$rtData || in_array($rtData['verdict'] ?? '', ['VALID', 'UNCERTAIN']))) {
+            $shouldValidate = true;
+            archLog("Phase4: Validé par Red Team favorable");
+        }
+        // Garde-fou : si les deux sont mauvais ou si Red Team dit INVALID, on rejette
+        else {
+            $shouldValidate = false;
+            archLog("Phase4: Rejeté - kinetic={$kineticValid}, redteam_verdict=" . ($rtData['verdict'] ?? 'N/A'));
+        }
+
+        $newStatus = $shouldValidate ? 'validated' : 'rejected';
+        
+        archLog("Final decision: status={$newStatus}");
+
+        $db->prepare("
+            UPDATE hypotheses SET 
+                kinetic_valid = ?, redteam_valid = ?, status = ?
+            WHERE id = ?
+        ")->execute([
+            $kineticValid,
+            $redTeamValid,
+            $newStatus,
+            $h['id'],
+        ]);
+
+        $results[] = [
+            'hypothesis_id'  => $h['id'],
+            'concept_a'      => $h['name_a'],
+            'concept_c'      => $h['name_c'],
+            'kinetic_valid'  => (bool)$kineticValid,
+            'monte_carlo_cv' => round($mcCV, 3),
+            'velocities'     => $velocities,
+            'redteam_verdict'=> $rtData['verdict'] ?? 'N/A',
+            'recommendation' => $rtData['recommendation'] ?? 'N/A',
+            'barriers'       => $rtData['barriers'] ?? [],
+            'final_status'   => $newStatus === 'validated' ? 'VALIDATED' : 'REJECTED',
+        ];
+
+        sleep(2);
     }
 
-    archLog("Phase 5: {$reportsGenerated} rapports générés");
-    
-    return [
-        'status' => 'ok',
-        'reports_generated' => $reportsGenerated,
-        'output_path' => OUTPUT_PATH
-    ];
+    archLog("Phase4: " . count($results) . " hypothèses simulées");
+    return ['status' => 'ok', 'phase' => 4, 'simulations' => $results];
 }
 
 // ============================================================
-// STATS & GRAPH
+// PHASE 5 — Validation Nouveauté + Génération Preprint
+// ============================================================
+function actionPhase5Validate(PDO $db, array $keys): array {
+    archLog("=== PHASE5 START ===");
+    
+    // Debug : voir combien d'hypothèses sont dans chaque statut
+    $statusCounts = $db->query("SELECT status, COUNT(*) as cnt FROM hypotheses GROUP BY status")->fetchAll();
+    archLog("Hypothesis status distribution: " . json_encode($statusCounts));
+    
+    $validated = $db->query("
+        SELECT h.*, ca.name as name_a, cc.name as name_c
+        FROM hypotheses h
+        JOIN concepts ca ON h.concept_a = ca.id
+        JOIN concepts cc ON h.concept_c = cc.id
+        WHERE h.status = 'validated' AND h.novelty_valid = 0
+        LIMIT 2
+    ")->fetchAll();
+
+    if (empty($validated)) {
+        // Vérifier s'il y a des hypothèses avec kinetic_valid=1 ou redteam_valid=1 qui ne sont pas encore traitées
+        $pendingReview = $db->query("
+            SELECT h.*, ca.name as name_a, cc.name as name_c
+            FROM hypotheses h
+            JOIN concepts ca ON h.concept_a = ca.id
+            JOIN concepts cc ON h.concept_c = cc.id
+            WHERE h.novelty_valid = 0 
+            AND (h.kinetic_valid = 1 OR h.redteam_valid = 1)
+            AND h.status != 'complete'
+            LIMIT 2
+        ")->fetchAll();
+        
+        if (!empty($pendingReview)) {
+            archLog("Found " . count($pendingReview) . " hypotheses with partial validation that could be processed");
+            foreach ($pendingReview as $h) {
+                archLog("Pending review: ID={$h['id']} {$h['name_a']} -> {$h['name_c']}, kinetic={$h['kinetic_valid']}, redteam={$h['redteam_valid']}, status={$h['status']}");
+            }
+        }
+        
+        return ['status' => 'warn', 'message' => 'Aucune hypothèse validée en attente de rapport. Lancez Phases 3 & 4.'];
+    }
+
+    archLog("Found " . count($validated) . " validated hypotheses to process");
+    $reports = [];
+
+    foreach ($validated as $h) {
+        archLog("=== PHASE5: Processing hypothesis ID={$h['id']} {$h['name_a']} -> {$h['name_c']} ===");
+        
+        // Filtre de nouveauté absolue — PubMed NOT query
+        $queryA = urlencode($h['name_a']);
+        $queryC = urlencode($h['name_c']);
+        $noveltyUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$queryA}+AND+{$queryC}&retmax=1&retmode=json";
+        
+        archLog("PubMed novelty check URL: {$noveltyUrl}");
+        $noveltyRaw = @file_get_contents($noveltyUrl);
+        $noveltyCount = 0;
+        if ($noveltyRaw) {
+            $nd = json_decode($noveltyRaw, true);
+            $noveltyCount = (int)($nd['esearchresult']['count'] ?? 0);
+            archLog("PubMed API response: " . json_encode($nd));
+        } else {
+            archLog("PubMed API call failed or returned empty");
+        }
+
+        $isNovel = $noveltyCount === 0;
+        archLog("Novelty check: {$noveltyCount} existing articles, is_novel=" . ($isNovel ? 'YES' : 'NO'));
+
+        // Génération du Pre-print
+        $prompt = <<<PROMPT
+Tu es ARCHIMEDES v5.0, rédacteur scientifique autonome.
+
+Rédige un pre-print scientifique de 5 sections sur la découverte suivante :
+
+DÉCOUVERTE :
+- Relation : {$h['name_a']} → {$h['name_c']}
+- Chemin inféré : {$h['path']}
+- Score de confiance : {$h['confidence']}
+- Nouveauté PubMed : {$noveltyCount} articles existants (0 = absolument nouveau)
+
+FORMAT OBLIGATOIRE — JSON :
+{
+  "title": "Titre scientifique accrocheur",
+  "abstract": "Résumé 200 mots max",
+  "introduction": "Contexte et état de l'art 300 mots",
+  "mechanism": "Mécanisme moléculaire proposé 300 mots",
+  "evidence": "Preuves et données existantes 300 mots",
+  "protocol": "Protocole expérimental suggéré 200 mots",
+  "unmet_need": "Besoin médical non satisfait adressé",
+  "impact_score": 0.85,
+  "keywords": ["kw1", "kw2", "kw3"]
+}
+PROMPT;
+
+        archLog("Calling Mistral for preprint generation...");
+        $result = callMistral($keys, $prompt, 'mistral-large-2512', 6000, 'phase5_preprint');
+        $reportData = null;
+
+        if ($result['ok']) {
+            $reportData = parseJsonFromMistral($result['content']);
+            archLog("Preprint data parsed: " . json_encode($reportData));
+        } else {
+            archLog("Preprint generation failed: " . ($result['error'] ?? 'unknown error'));
+        }
+
+        $reportPath = null;
+        if ($reportData) {
+            if (!is_dir(OUTPUT_PATH)) mkdir(OUTPUT_PATH, 0755, true);
+            $slug = preg_replace('/[^a-z0-9_]/', '_', strtolower($h['name_a'] . '_' . $h['name_c']));
+            $reportPath = OUTPUT_PATH . "preprint_{$h['id']}_{$slug}.md";
+
+            $md = "# {$reportData['title']}\n\n";
+            $md .= "> **ARCHIMEDES v5.0** | Generated: " . date('Y-m-d H:i:s') . "\n\n";
+            $md .= "**Keywords:** " . implode(', ', $reportData['keywords'] ?? []) . "\n\n";
+            $md .= "## Abstract\n{$reportData['abstract']}\n\n";
+            $md .= "## Introduction\n{$reportData['introduction']}\n\n";
+            $md .= "## Proposed Mechanism\n{$reportData['mechanism']}\n\n";
+            $md .= "## Supporting Evidence\n{$reportData['evidence']}\n\n";
+            $md .= "## Suggested Protocol\n{$reportData['protocol']}\n\n";
+            $md .= "## Unmet Medical Need\n{$reportData['unmet_need']}\n\n";
+            $md .= "---\n*Confidence: {$h['confidence']} | Novelty: " . ($isNovel ? 'ABSOLUTE (0 prior art)' : "{$noveltyCount} related papers") . " | Impact Score: {$reportData['impact_score']}*\n";
+
+            file_put_contents($reportPath, $md);
+            archLog("Preprint saved to: {$reportPath}");
+
+            $db->prepare("UPDATE hypotheses SET novelty_valid = 1, report_path = ?, status = 'complete' WHERE id = ?")
+               ->execute([$reportPath, $h['id']]);
+            archLog("Hypothesis ID={$h['id']} marked as complete");
+        } else {
+            archLog("No report data generated, hypothesis not updated");
+        }
+
+        $reports[] = [
+            'hypothesis_id' => $h['id'],
+            'title'         => $reportData['title'] ?? 'N/A',
+            'relation'      => "{$h['name_a']} → {$h['name_c']}",
+            'novelty_count' => $noveltyCount,
+            'is_novel'      => $isNovel,
+            'report_path'   => $reportPath,
+            'impact'        => $reportData['impact_score'] ?? 0,
+            'unmet_need'    => $reportData['unmet_need'] ?? '',
+        ];
+
+        sleep(2);
+    }
+
+    archLog("Phase5: " . count($reports) . " pre-prints générés");
+    archLog("=== PHASE5 END ===");
+    return ['status' => 'ok', 'phase' => 5, 'reports' => $reports];
+}
+
+// ============================================================
+// STATS & UTILITIES
 // ============================================================
 function actionGetStats(PDO $db): array {
     return [
-        'concepts' => $db->query("SELECT COUNT(*) FROM concepts")->fetchColumn(),
-        'edges' => $db->query("SELECT COUNT(*) FROM edges")->fetchColumn(),
-        'articles' => $db->query("SELECT COUNT(*) FROM articles")->fetchColumn(),
-        'hypotheses_total' => $db->query("SELECT COUNT(*) FROM hypotheses")->fetchColumn(),
-        'hypotheses_validated' => $db->query("SELECT COUNT(*) FROM hypotheses WHERE status='validated'")->fetchColumn(),
-        'hypotheses_promising' => $db->query("SELECT COUNT(*) FROM hypotheses WHERE status='promising'")->fetchColumn(),
-        'hypotheses_pending' => $db->query("SELECT COUNT(*) FROM hypotheses WHERE status='pending'")->fetchColumn(),
-        'version' => ARCH_VERSION
+        'status'       => 'ok',
+        'concepts'     => (int)$db->query("SELECT COUNT(*) FROM concepts")->fetchColumn(),
+        'edges'        => (int)$db->query("SELECT COUNT(*) FROM edges")->fetchColumn(),
+        'articles'     => (int)$db->query("SELECT COUNT(*) FROM articles")->fetchColumn(),
+        'hypotheses'   => (int)$db->query("SELECT COUNT(*) FROM hypotheses")->fetchColumn(),
+        'validated'    => (int)$db->query("SELECT COUNT(*) FROM hypotheses WHERE status='validated' OR status='complete'")->fetchColumn(),
+        'complete'     => (int)$db->query("SELECT COUNT(*) FROM hypotheses WHERE status='complete'")->fetchColumn(),
+        'clusters'     => $db->query("SELECT cluster_id, COUNT(*) as cnt FROM concepts GROUP BY cluster_id")->fetchAll(),
+        'top_concepts' => $db->query("SELECT c.name, COUNT(e.id) as degree FROM concepts c LEFT JOIN edges e ON c.id=e.source_id GROUP BY c.id ORDER BY degree DESC LIMIT 5")->fetchAll(),
     ];
 }
 
 function actionGetGraph(PDO $db): array {
-    $nodes = $db->query("SELECT id, name, domain, cluster_id FROM concepts LIMIT 100")->fetchAll();
-    $links = $db->query("SELECT source_id, target_id, relation_type, confidence FROM edges LIMIT 500")->fetchAll();
-    
-    return ['nodes' => $nodes, 'links' => $links];
+    $nodes = $db->query("SELECT id, name, domain, cluster_id, saturation FROM concepts LIMIT 100")->fetchAll();
+    $edges = $db->query("SELECT source_id, target_id, relation_type, confidence FROM edges LIMIT 200")->fetchAll();
+    return ['status' => 'ok', 'nodes' => $nodes, 'edges' => $edges];
 }
 
 function actionGetReports(): array {
-    if (!is_dir(OUTPUT_PATH)) return ['reports' => []];
-    
-    $files = glob(OUTPUT_PATH . "*.json");
+    if (!is_dir(OUTPUT_PATH)) return ['status' => 'ok', 'reports' => []];
+    $files = glob(OUTPUT_PATH . '*.md') ?: [];
     $reports = [];
-    
-    foreach ($files as $file) {
-        $content = file_get_contents($file);
-        $reports[] = [
-            'filename' => basename($file),
-            'content' => json_decode($content, true)
-        ];
+    foreach ($files as $f) {
+        $content = file_get_contents($f);
+        $title = '';
+        if (preg_match('/^# (.+)/m', $content, $m)) $title = $m[1];
+        $reports[] = ['file' => basename($f), 'title' => $title, 'size' => filesize($f), 'created' => date('Y-m-d H:i:s', filemtime($f)), 'preview' => substr($content, 0, 400)];
     }
-    
-    return ['reports' => $reports];
+    return ['status' => 'ok', 'reports' => $reports];
 }
 
 function actionGetLogs(): array {
-    if (!file_exists(LOG_PATH)) return ['logs' => ''];
-    
-    $lines = file(LOG_PATH, FILE_IGNORE_NEW_LINES);
-    $recent = array_slice($lines, -200);
-    
-    return ['logs' => implode("\n", $recent)];
+    $logs = '';
+    if (file_exists(LOG_PATH)) {
+        $lines = file(LOG_PATH);
+        // Augmenté à 200 lignes pour voir plus de détails
+        $logs = implode('', array_slice($lines, -200));
+    }
+    return ['status' => 'ok', 'logs' => $logs];
 }
 
 function actionClearDB(PDO $db): array {
-    $db->beginTransaction();
-    try {
-        $db->exec("DELETE FROM edges");
-        $db->exec("DELETE FROM articles");
-        $db->exec("DELETE FROM hypotheses");
-        $db->exec("DELETE FROM key_usage");
-        $db->exec("DELETE FROM api_cache");
-        $db->exec("DELETE FROM concepts");
-        $db->exec("VACUUM");
-        $db->commit();
-        archLog("Database cleared");
-        return ['status' => 'ok', 'message' => 'Base de données réinitialisée'];
-    } catch (Throwable $e) {
-        $db->rollBack();
-        return ['status' => 'error', 'message' => $e->getMessage()];
-    }
+    $db->exec("DELETE FROM hypotheses; DELETE FROM edges; DELETE FROM articles; DELETE FROM concepts; DELETE FROM key_usage;");
+    archLog("DB cleared by user");
+    return ['status' => 'ok', 'message' => 'Base de données réinitialisée'];
 }
 
 // ============================================================
-// FRONTEND HTML
+// HTML INTERFACE — FUTURISTE SOMBRE (Moebius aesthetic)
 // ============================================================
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARCHIMEDES v<?= ARCH_VERSION ?> — Autonomous Scientific Discovery</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #eee; min-height: 100vh; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 30px 0; border-bottom: 2px solid #0f3460; margin-bottom: 30px; }
-        h1 { font-size: 2.5em; color: #e94560; margin-bottom: 10px; }
-        .version { color: #53d8fb; font-size: 1.2em; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; text-align: center; backdrop-filter: blur(10px); }
-        .stat-value { font-size: 2.5em; font-weight: bold; color: #53d8fb; }
-        .stat-label { color: #aaa; margin-top: 5px; }
-        .controls { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px; justify-content: center; }
-        button { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; transition: all 0.3s; background: #0f3460; color: #fff; }
-        button:hover { background: #e94560; transform: translateY(-2px); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .log-panel { background: #0a0a15; border-radius: 10px; padding: 20px; max-height: 400px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.9em; }
-        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .log-time { color: #53d8fb; }
-        .log-error { color: #e94560; }
-        .graph-container { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 20px; margin-top: 30px; min-height: 400px; }
-        .progress-bar { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin: 20px 0; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #53d8fb, #e94560); width: 0%; transition: width 0.5s; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; margin-left: 10px; }
-        .status-ok { background: #4caf50; }
-        .status-warning { background: #ff9800; }
-        .status-error { background: #f44336; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCHIMEDES v5.0 — Autonomous Discovery Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #020408;
+  --bg2:      #060d14;
+  --bg3:      #0a1420;
+  --panel:    #0d1b2a;
+  --border:   #1a3a5c;
+  --accent1:  #00c8ff;
+  --accent2:  #ff6b00;
+  --accent3:  #7fff00;
+  --accent4:  #ff2d6b;
+  --text:     #b8d4e8;
+  --textdim:  #4a7a9b;
+  --glow1:    0 0 20px rgba(0,200,255,0.3);
+  --glow2:    0 0 20px rgba(255,107,0,0.3);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grid noise texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0,200,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanline effect */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---- HEADER ---- */
+header {
+  position: relative;
+  z-index: 10;
+  padding: 20px 30px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0,200,255,0.05) 0%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.logo-block { display: flex; align-items: center; gap: 16px; }
+.logo-icon {
+  width: 48px; height: 48px;
+  border: 2px solid var(--accent1);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--accent1);
+  box-shadow: var(--glow1), inset 0 0 20px rgba(0,200,255,0.1);
+  animation: pulse-icon 3s ease-in-out infinite;
+}
+@keyframes pulse-icon {
+  0%,100% { box-shadow: var(--glow1), inset 0 0 20px rgba(0,200,255,0.1); }
+  50% { box-shadow: 0 0 40px rgba(0,200,255,0.6), inset 0 0 30px rgba(0,200,255,0.2); }
+}
+.logo-text h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--accent1);
+  letter-spacing: 4px;
+  text-shadow: var(--glow1);
+}
+.logo-text p {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--textdim);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+.header-stats {
+  display: flex; gap: 20px;
+}
+.hstat {
+  text-align: center;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: rgba(0,200,255,0.03);
+  border-radius: 4px;
+}
+.hstat-val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent1);
+  line-height: 1;
+}
+.hstat-lbl {
+  font-size: 10px;
+  color: var(--textdim);
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+.sys-status {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--textdim);
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent3);
+  box-shadow: 0 0 8px var(--accent3);
+  animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ---- LAYOUT ---- */
+.main-layout {
+  position: relative; z-index: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  grid-template-rows: auto 1fr;
+  min-height: calc(100vh - 90px);
+  gap: 0;
+}
+
+/* ---- SIDEBAR LEFT ---- */
+.sidebar-left {
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--textdim);
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+/* Phase Buttons */
+.phase-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  width: 100%;
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+.phase-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgba(0,200,255,0.05));
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.phase-btn:hover::before { opacity: 1; }
+.phase-btn:hover {
+  border-left-color: var(--accent1);
+  border-color: rgba(0,200,255,0.3);
+  transform: translateX(2px);
+}
+.phase-btn.loading {
+  border-left-color: var(--accent2);
+  animation: loading-pulse 1s ease-in-out infinite;
+}
+@keyframes loading-pulse {
+  0%,100% { box-shadow: none; }
+  50% { box-shadow: 0 0 15px rgba(255,107,0,0.3); }
+}
+.phase-btn.success { border-left-color: var(--accent3); }
+.phase-btn.error { border-left-color: var(--accent4); }
+.phase-num {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(0,200,255,0.1);
+  border: 1px solid rgba(0,200,255,0.3);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent1);
+  flex-shrink: 0;
+}
+.phase-info { flex: 1; }
+.phase-name { font-size: 13px; font-weight: 700; color: #d0e8f0; }
+.phase-desc { font-size: 11px; color: var(--textdim); margin-top: 1px; font-weight: 400; }
+.phase-indicator {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.phase-btn.success .phase-indicator { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+.phase-btn.loading .phase-indicator { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); animation: blink 0.5s infinite; }
+
+/* Utility Buttons */
+.util-row { display: flex; gap: 8px; }
+.util-btn {
+  flex: 1;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--textdim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.util-btn:hover { border-color: var(--accent1); color: var(--accent1); background: rgba(0,200,255,0.05); }
+.util-btn.danger:hover { border-color: var(--accent4); color: var(--accent4); background: rgba(255,45,107,0.05); }
+
+/* Auto-run */
+.auto-block {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.auto-label { font-size: 12px; color: var(--textdim); margin-bottom: 8px; font-family: 'Share Tech Mono', monospace; letter-spacing: 1px; }
+.auto-controls { display: flex; gap: 8px; align-items: center; }
+.auto-btn {
+  padding: 7px 12px;
+  background: rgba(0,200,255,0.08);
+  border: 1px solid rgba(0,200,255,0.3);
+  border-radius: 3px;
+  color: var(--accent1);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+.auto-btn:hover { background: rgba(0,200,255,0.15); box-shadow: var(--glow1); }
+.auto-btn.active { background: rgba(255,107,0,0.1); border-color: var(--accent2); color: var(--accent2); }
+.cycle-count { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--accent2); }
+
+/* ---- CENTER PANEL ---- */
+.center-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tab nav */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  padding: 0 20px;
+  gap: 4px;
+}
+.tab {
+  padding: 12px 18px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--textdim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent1); border-bottom-color: var(--accent1); }
+
+.tab-content { flex: 1; overflow: auto; padding: 20px; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* Console / Log Output */
+.console {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  color: var(--accent3);
+}
+.console::-webkit-scrollbar { width: 4px; }
+.console::-webkit-scrollbar-track { background: var(--bg); }
+.console::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.log-line { display: block; }
+.log-line.info  { color: var(--accent1); }
+.log-line.warn  { color: var(--accent2); }
+.log-line.error { color: var(--accent4); }
+.log-line.ok    { color: var(--accent3); }
+.log-line.dim   { color: var(--textdim); }
+
+/* Cards grid */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 60px; height: 60px;
+  background: radial-gradient(circle at top right, rgba(0,200,255,0.06) 0%, transparent 70%);
+}
+.card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent1);
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+.card-val {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+}
+.card-sub { font-size: 12px; color: var(--textdim); margin-top: 4px; }
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin: 2px;
+}
+.badge-valid { background: rgba(127,255,0,0.1); color: var(--accent3); border: 1px solid rgba(127,255,0,0.3); }
+.badge-pending { background: rgba(0,200,255,0.1); color: var(--accent1); border: 1px solid rgba(0,200,255,0.3); }
+.badge-reject { background: rgba(255,45,107,0.1); color: var(--accent4); border: 1px solid rgba(255,45,107,0.3); }
+.badge-warn { background: rgba(255,107,0,0.1); color: var(--accent2); border: 1px solid rgba(255,107,0,0.3); }
+
+/* Graph canvas */
+#graphCanvas {
+  width: 100%;
+  height: 500px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: block;
+}
+
+/* Report viewer */
+.report-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.report-item:hover { border-color: rgba(0,200,255,0.4); transform: translateY(-1px); }
+.report-title { font-weight: 700; color: #d0e8f0; margin-bottom: 6px; }
+.report-meta { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--textdim); }
+.report-preview { font-size: 12px; color: var(--textdim); margin-top: 8px; line-height: 1.5; }
+.report-full {
+  display: none;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  margin-top: 12px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+/* ---- SIDEBAR RIGHT ---- */
+.sidebar-right {
+  border-left: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* Kinetic visualizer */
+.kinetic-chart {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+}
+#kineticCanvas {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+.kinetic-params {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.kparam {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px;
+  text-align: center;
+}
+.kparam-label { font-size: 10px; color: var(--textdim); font-family: 'Share Tech Mono', monospace; }
+.kparam-val { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--accent2); margin-top: 2px; }
+
+/* Live feed */
+.live-feed {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+}
+.feed-item {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(26,58,92,0.4);
+  color: var(--textdim);
+  line-height: 1.4;
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-time { color: rgba(0,200,255,0.5); font-size: 10px; }
+
+/* Progress ring */
+.progress-section { text-align: center; }
+.ring-container { position: relative; display: inline-block; margin: 10px auto; }
+.ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ring-pct { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: var(--accent1); }
+.ring-sub { font-size: 10px; color: var(--textdim); }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .main-layout { grid-template-columns: 240px 1fr; }
+  .sidebar-right { display: none; }
+}
+@media (max-width: 768px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .sidebar-left { border-right: none; border-bottom: 1px solid var(--border); }
+  .header-stats { display: none; }
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🔬 ARCHIMEDES</h1>
-            <div class="version">v<?= ARCH_VERSION ?> — Autonomous Scientific Discovery Engine</div>
-        </header>
 
-        <div class="stats-grid" id="statsGrid">
-            <div class="stat-card"><div class="stat-value" id="statConcepts">0</div><div class="stat-label">Concepts</div></div>
-            <div class="stat-card"><div class="stat-value" id="statEdges">0</div><div class="stat-label">Relations</div></div>
-            <div class="stat-card"><div class="stat-value" id="statArticles">0</div><div class="stat-label">Articles</div></div>
-            <div class="stat-card"><div class="stat-value" id="statHypotheses">0</div><div class="stat-label">Hypothèses</div></div>
-            <div class="stat-card"><div class="stat-value" id="statValidated">0</div><div class="stat-label">Validées</div></div>
-            <div class="stat-card"><div class="stat-value" id="statPromising">0</div><div class="stat-label">Prometteuses</div></div>
+<header>
+  <div class="logo-block">
+    <div class="logo-icon">Ar</div>
+    <div class="logo-text">
+      <h1>ARCHIMEDES</h1>
+      <p>v5.0 · AUTONOMOUS SCIENTIFIC DISCOVERY ENGINE</p>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="hstat"><div class="hstat-val" id="stat-concepts">0</div><div class="hstat-lbl">CONCEPTS</div></div>
+    <div class="hstat"><div class="hstat-val" id="stat-edges">0</div><div class="hstat-lbl">EDGES</div></div>
+    <div class="hstat"><div class="hstat-val" id="stat-hypotheses">0</div><div class="hstat-lbl">HYPOTHÈSES</div></div>
+    <div class="hstat"><div class="hstat-val" id="stat-complete" style="color:var(--accent3)">0</div><div class="hstat-lbl">VALIDÉES</div></div>
+  </div>
+  <div class="sys-status">
+    <div class="status-dot"></div>
+    <span id="sys-status-text">PHP <?= PHP_VERSION ?> · SQLite · LiteSpeed <a href="dashboard.php">dashbrd</a></span>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- SIDEBAR LEFT — Pipeline Control -->
+  <aside class="sidebar-left">
+    <div class="section-title">// PIPELINE CONTROL</div>
+
+    <button class="phase-btn" id="btn-init" onclick="runAction('init_db', this)">
+      <div class="phase-num">0</div>
+      <div class="phase-info">
+        <div class="phase-name">INIT DATABASE</div>
+        <div class="phase-desc">Créer tables + index SQLite</div>
+      </div>
+      <div class="phase-indicator"></div>
+    </button>
+
+    <button class="phase-btn" id="btn-p1" onclick="runPhase(1, this)">
+      <div class="phase-num">1</div>
+      <div class="phase-info">
+        <div class="phase-name">ONTOLOGIE</div>
+        <div class="phase-desc">Génération concepts MeSH</div>
+      </div>
+      <div class="phase-indicator"></div>
+    </button>
+
+    <button class="phase-btn" id="btn-p2" onclick="runPhase(2, this)">
+      <div class="phase-num">2</div>
+      <div class="phase-info">
+        <div class="phase-name">DEEP-SCAN</div>
+        <div class="phase-desc">PubMed + extraction triplets</div>
+      </div>
+      <div class="phase-indicator"></div>
+    </button>
+
+    <button class="phase-btn" id="btn-p3" onclick="runPhase(3, this)">
+      <div class="phase-num">3</div>
+      <div class="phase-info">
+        <div class="phase-name">GRAPH REASON</div>
+        <div class="phase-desc">SQL 4° degré + transitivité</div>
+      </div>
+      <div class="phase-indicator"></div>
+    </button>
+
+    <button class="phase-btn" id="btn-p4" onclick="runPhase(4, this)">
+      <div class="phase-num">4</div>
+      <div class="phase-info">
+        <div class="phase-name">SIMULATION</div>
+        <div class="phase-desc">Cinétique + Red Team</div>
+      </div>
+      <div class="phase-indicator"></div>
+    </button>
+
+    <button class="phase-btn" id="btn-p5" onclick="runPhase(5, this)">
+      <div class="phase-num">5</div>
+      <div class="phase-info">
+        <div class="phase-name">VALIDATION</div>
+        <div class="phase-desc">Nouveauté + Pre-print</div>
+      </div>
+      <div class="phase-indicator"></div>
+    </button>
+
+    <div class="section-title" style="margin-top:8px">// AUTO-CYCLE</div>
+    <div class="auto-block">
+      <div class="auto-label">// BOUCLE INFINIE</div>
+      <div class="auto-controls">
+        <button class="auto-btn" id="btn-auto" onclick="toggleAuto()">▶ START</button>
+        <div>
+          <div class="auto-label" style="margin:0">CYCLES</div>
+          <div class="cycle-count" id="cycle-count">0</div>
         </div>
-
-        <div class="controls">
-            <button onclick="runPhase('init_db')">🗄️ Initialiser DB</button>
-            <button onclick="runPhase('phase1_seed')">🌱 Phase 1: Ontologie</button>
-            <button onclick="runPhase('phase2_harvest')">📚 Phase 2: Harvest</button>
-            <button onclick="runPhase('phase3_reason')">🧠 Phase 3: Reasoning</button>
-            <button onclick="runPhase('phase4_sim')">⚗️ Phase 4: Simulation</button>
-            <button onclick="runPhase('phase5_validate')">📊 Phase 5: Rapports</button>
-            <button onclick="refreshStats()">🔄 Actualiser</button>
-            <button onclick="clearDB()" style="background:#f44336;">🗑️ Reset</button>
-        </div>
-
-        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-
-        <div class="log-panel" id="logPanel">
-            <div class="log-entry">En attente d'initialisation...</div>
-        </div>
-
-        <div class="graph-container">
-            <h3>🕸️ Graphe de Connaissances</h3>
-            <div id="graphViz" style="margin-top: 20px; min-height: 300px; background: rgba(0,0,0,0.3); border-radius: 8px;"></div>
-        </div>
+      </div>
     </div>
 
-    <script>
-        let isRunning = false;
+    <div class="section-title" style="margin-top:8px">// UTILS</div>
+    <div class="util-row">
+      <button class="util-btn" onclick="loadStats()">REFRESH</button>
+      <button class="util-btn" onclick="loadGraph()">GRAPH</button>
+    </div>
+    <div class="util-row">
+      <button class="util-btn" onclick="loadReports()">REPORTS</button>
+      <button class="util-btn" onclick="loadLogs()">LOGS</button>
+    </div>
+    <div class="util-row">
+      <button class="util-btn danger" onclick="confirmClear()">CLEAR DB</button>
+    </div>
 
-        async function runPhase(action) {
-            if (isRunning) return;
-            isRunning = true;
-            updateProgress(10);
-            
-            const logPanel = document.getElementById('logPanel');
-            logPanel.innerHTML = `<div class="log-entry"><span class="log-time">[${new Date().toLocaleTimeString()}]</span> Lancement: ${action}</div>` + logPanel.innerHTML;
+    <div style="margin-top:auto; padding-top:16px; border-top:1px solid var(--border);">
+      <div class="section-title">// MISTRAL KEYS</div>
+      <?php foreach ($MISTRAL_KEYS as $i => $k): ?>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0;">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--accent3);box-shadow:0 0 6px var(--accent3)"></div>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--textdim)">KEY <?= $i+1 ?> ···<?= substr($k,-6) ?></span>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </aside>
 
-            try {
-                const formData = new FormData();
-                formData.append('action', action);
-                
-                const response = await fetch('index.php', { method: 'POST', body: formData });
-                const result = await response.json();
-                
-                updateProgress(100);
-                
-                if (result.error) {
-                    logPanel.innerHTML = `<div class="log-entry log-error"><span class="log-time">[${new Date().toLocaleTimeString()}]</span> ERREUR: ${result.error}</div>` + logPanel.innerHTML;
-                } else {
-                    logPanel.innerHTML = `<div class="log-entry"><span class="log-time">[${new Date().toLocaleTimeString()}]</span> SUCCÈS: ${JSON.stringify(result).substring(0, 200)}...</div>` + logPanel.innerHTML;
-                    refreshStats();
-                }
-            } catch (error) {
-                logPanel.innerHTML = `<div class="log-entry log-error"><span class="log-time">[${new Date().toLocaleTimeString()}]</span> ERREUR: ${error.message}</div>` + logPanel.innerHTML;
-            }
-            
-            isRunning = false;
-        }
+  <!-- CENTER PANEL -->
+  <main class="center-panel">
+    <nav class="tab-nav">
+      <button class="tab active" onclick="showTab('console', this)">CONSOLE</button>
+      <button class="tab" onclick="showTab('dashboard', this)">DASHBOARD</button>
+      <button class="tab" onclick="showTab('graph', this)">GRAPH</button>
+      <button class="tab" onclick="showTab('reports', this)">REPORTS</button>
+      <button class="tab" onclick="showTab('logs', this)">SYSTEM LOGS</button>
+    </nav>
 
-        async function refreshStats() {
-            try {
-                const formData = new FormData();
-                formData.append('action', 'get_stats');
-                
-                const response = await fetch('index.php', { method: 'POST', body: formData });
-                const stats = await response.json();
-                
-                document.getElementById('statConcepts').textContent = stats.concepts || 0;
-                document.getElementById('statEdges').textContent = stats.edges || 0;
-                document.getElementById('statArticles').textContent = stats.articles || 0;
-                document.getElementById('statHypotheses').textContent = stats.hypotheses_total || 0;
-                document.getElementById('statValidated').textContent = stats.hypotheses_validated || 0;
-                document.getElementById('statPromising').textContent = stats.hypotheses_promising || 0;
-            } catch (error) {
-                console.error('Stats error:', error);
-            }
-        }
+    <div class="tab-content">
 
-        async function loadLogs() {
-            try {
-                const formData = new FormData();
-                formData.append('action', 'get_logs');
-                
-                const response = await fetch('index.php', { method: 'POST', body: formData });
-                const result = await response.json();
-                
-                const logPanel = document.getElementById('logPanel');
-                const logs = result.logs || '';
-                logPanel.innerHTML = logs.split('\n').reverse().slice(0, 50).map(line => 
-                    `<div class="log-entry">${line}</div>`
-                ).join('');
-            } catch (error) {
-                console.error('Logs error:', error);
-            }
-        }
+      <!-- CONSOLE TAB -->
+      <div id="tab-console" class="tab-pane active">
+        <div class="console" id="main-console">
+          <span class="log-line info">[ ARCHIMEDES v5.0 ] Autonomous Scientific Discovery Engine</span>
+          <span class="log-line dim">[ INIT ] PHP <?= PHP_VERSION ?> · SQLite3 · LiteSpeed/Hostinger</span>
+          <span class="log-line dim">[ INIT ] Mistral API · <?= count($MISTRAL_KEYS) ?> clés en rotation</span>
+          <span class="log-line dim">[ READY ] Cliquez sur "INIT DATABASE" pour démarrer le pipeline.</span>
+        </div>
+        <div id="result-display" style="margin-top:16px;"></div>
+      </div>
 
-        async function loadGraph() {
-            try {
-                const formData = new FormData();
-                formData.append('action', 'get_graph');
-                
-                const response = await fetch('index.php', { method: 'POST', body: formData });
-                const graph = await response.json();
-                
-                const graphViz = document.getElementById('graphViz');
-                if (graph.nodes && graph.nodes.length > 0) {
-                    graphViz.innerHTML = `<p>📊 ${graph.nodes.length} noeuds, ${graph.links.length} connexions chargés</p>`;
-                } else {
-                    graphViz.innerHTML = '<p>Aucune donnée de graphe disponible</p>';
-                }
-            } catch (error) {
-                console.error('Graph error:', error);
-            }
-        }
+      <!-- DASHBOARD TAB -->
+      <div id="tab-dashboard" class="tab-pane">
+        <div class="cards-grid" id="stats-grid">
+          <div class="card"><div class="card-title">CONCEPTS</div><div class="card-val" id="d-concepts">—</div><div class="card-sub">Termes MeSH indexés</div></div>
+          <div class="card"><div class="card-title">EDGES</div><div class="card-val" id="d-edges">—</div><div class="card-sub">Relations dans le graphe</div></div>
+          <div class="card"><div class="card-title">ARTICLES</div><div class="card-val" id="d-articles">—</div><div class="card-sub">PubMed récoltés</div></div>
+          <div class="card"><div class="card-title">HYPOTHÈSES</div><div class="card-val" id="d-hypotheses">—</div><div class="card-sub">Générées par Graph Reasoning</div></div>
+          <div class="card" style="border-color:rgba(127,255,0,0.2)"><div class="card-title" style="color:var(--accent3)">VALIDÉES</div><div class="card-val" id="d-validated" style="color:var(--accent3)">—</div><div class="card-sub">Simulation + Red Team OK</div></div>
+          <div class="card" style="border-color:rgba(0,200,255,0.2)"><div class="card-title" style="color:var(--accent1)">PRE-PRINTS</div><div class="card-val" id="d-complete" style="color:var(--accent1)">—</div><div class="card-sub">Rapports générés</div></div>
+        </div>
+        <div style="margin-top:20px;">
+          <div class="section-title">// TOP CONCEPTS (DEGRÉ)</div>
+          <div id="top-concepts" style="margin-top:12px;"></div>
+        </div>
+        <div style="margin-top:20px;">
+          <div class="section-title">// CLUSTERS</div>
+          <div id="clusters-display" style="margin-top:12px;"></div>
+        </div>
+      </div>
 
-        async function clearDB() {
-            if (!confirm('Êtes-vous sûr de vouloir effacer toute la base de données ?')) return;
-            await runPhase('clear_db');
-        }
+      <!-- GRAPH TAB -->
+      <div id="tab-graph" class="tab-pane">
+        <div class="section-title" style="margin-bottom:12px">// KNOWLEDGE GRAPH — VISUALISATION</div>
+        <canvas id="graphCanvas"></canvas>
+        <div style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--textdim)">
+          Nœuds : <span id="graph-nodes">0</span> · Edges : <span id="graph-edges">0</span>
+        </div>
+      </div>
 
-        function updateProgress(percent) {
-            document.getElementById('progressFill').style.width = percent + '%';
-        }
+      <!-- REPORTS TAB -->
+      <div id="tab-reports" class="tab-pane">
+        <div class="section-title" style="margin-bottom:12px">// PRE-PRINTS GÉNÉRÉS PAR L'IA</div>
+        <div id="reports-container"><p style="color:var(--textdim)">Cliquez sur "REPORTS" pour charger les rapports.</p></div>
+      </div>
 
-        // Auto-refresh
-        setInterval(() => { refreshStats(); loadLogs(); loadGraph(); }, 10000);
-        
-        // Initial load
-        refreshStats();
-        loadLogs();
-        loadGraph();
-    </script>
+      <!-- LOGS TAB -->
+      <div id="tab-logs" class="tab-pane">
+        <div class="section-title" style="margin-bottom:12px">// SYSTEM LOGS</div>
+        <div class="console" id="sys-logs" style="max-height:600px;">
+          <span class="log-line dim">Cliquez sur "LOGS" pour charger les journaux système.</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- SIDEBAR RIGHT — Kinetic & Live Feed -->
+  <aside class="sidebar-right">
+    <div class="section-title">// KINETIC SIMULATOR</div>
+    <div class="kinetic-chart">
+      <canvas id="kineticCanvas"></canvas>
+      <div class="kinetic-params">
+        <div class="kparam"><div class="kparam-label">Vmax</div><div class="kparam-val" id="kp-vmax">—</div></div>
+        <div class="kparam"><div class="kparam-label">Km</div><div class="kparam-val" id="kp-km">—</div></div>
+        <div class="kparam"><div class="kparam-label">v(0.001M)</div><div class="kparam-val" id="kp-v">—</div></div>
+        <div class="kparam"><div class="kparam-label">STATUS</div><div class="kparam-val" id="kp-status" style="font-size:12px">IDLE</div></div>
+      </div>
+    </div>
+
+    <div class="section-title">// LIVE ACTIVITY FEED</div>
+    <div class="live-feed" id="live-feed">
+      <div class="feed-item"><span class="feed-time">INIT</span><br>Système prêt. En attente du démarrage du pipeline.</div>
+    </div>
+
+    <div class="section-title">// PIPELINE PROGRESS</div>
+    <div class="progress-section">
+      <div class="ring-container">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" stroke-width="4"/>
+          <circle id="progress-ring" cx="50" cy="50" r="42" fill="none" stroke="var(--accent1)" stroke-width="4"
+            stroke-linecap="round"
+            stroke-dasharray="263.9"
+            stroke-dashoffset="263.9"
+            transform="rotate(-90 50 50)"
+            style="transition: stroke-dashoffset 0.5s ease; filter: drop-shadow(0 0 6px var(--accent1));"/>
+        </svg>
+        <div class="ring-label">
+          <div class="ring-pct" id="progress-pct">0%</div>
+          <div class="ring-sub">PIPELINE</div>
+        </div>
+      </div>
+      <div id="progress-phases" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--textdim);margin-top:8px;text-align:left;"></div>
+    </div>
+  </aside>
+
+</div>
+
+<script>
+// ============================================================
+// JAVASCRIPT CONTROLLER — AJAX-first, zero page reload
+// ============================================================
+
+let autoRunning = false;
+let autoCycle   = 0;
+let autoTimer   = null;
+let phaseDone   = {1:false, 2:false, 3:false, 4:false, 5:false};
+
+// ---- AJAX Engine ----
+async function ajax(action, extraData = {}) {
+  const formData = new FormData();
+  formData.append('action', action);
+  Object.entries(extraData).forEach(([k,v]) => formData.append(k, v));
+
+  try {
+    const res = await fetch(window.location.href, { method: 'POST', body: formData });
+    return await res.json();
+  } catch(e) {
+    return { error: 'Fetch failed: ' + e.message };
+  }
+}
+
+// ---- Console Logger ----
+function log(msg, type = 'info') {
+  const c = document.getElementById('main-console');
+  const el = document.createElement('span');
+  el.className = `log-line ${type}`;
+  el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  c.appendChild(el);
+  c.scrollTop = c.scrollHeight;
+}
+
+function addFeed(msg) {
+  const feed = document.getElementById('live-feed');
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.innerHTML = `<span class="feed-time">${new Date().toLocaleTimeString()}</span><br>${msg}`;
+  feed.insertBefore(item, feed.firstChild);
+  if (feed.children.length > 30) feed.removeChild(feed.lastChild);
+}
+
+// ---- Phase Runner ----
+async function runAction(action, btn) {
+  if (btn) { btn.classList.add('loading'); btn.classList.remove('success','error'); }
+  log(`→ Action: ${action} ...`, 'info');
+
+  const data = await ajax(action);
+
+  if (btn) { btn.classList.remove('loading'); btn.classList.add(data.error ? 'error' : 'success'); }
+
+  if (data.error) {
+    log(`✗ ERREUR: ${data.error}`, 'error');
+    addFeed('❌ ' + data.error);
+    showResult({ error: data.error });
+    return null;
+  }
+
+  log(`✓ ${data.message || JSON.stringify(data).substring(0,100)}`, 'ok');
+  showResult(data);
+  loadStats();
+  return data;
+}
+
+async function runPhase(n, btn) {
+  const actions = { 1:'phase1_seed', 2:'phase2_harvest', 3:'phase3_reason', 4:'phase4_sim', 5:'phase5_validate' };
+  const action = actions[n];
+  if (!action) return;
+
+  if (btn) { btn.classList.add('loading'); btn.classList.remove('success','error'); }
+  log(`→ PHASE ${n} démarrée ...`, 'warn');
+  addFeed(`🔬 Phase ${n} en cours...`);
+
+  const data = await ajax(action);
+
+  if (btn) { btn.classList.remove('loading'); btn.classList.add(data.error || data.status === 'error' ? 'error' : 'success'); }
+
+  if (data.error || data.status === 'error') {
+    log(`✗ Phase ${n} ERREUR: ${data.error || data.message}`, 'error');
+    addFeed(`❌ Phase ${n}: ${data.error || data.message}`);
+    showResult(data);
+    return null;
+  }
+
+  phaseDone[n] = true;
+  updateProgress();
+  log(`✓ Phase ${n} terminée. ${summarizePhase(n, data)}`, 'ok');
+  addFeed(`✅ Phase ${n} OK — ${summarizePhase(n, data)}`);
+  showResult(data);
+
+  // Mise à jour cinétique si Phase 4
+  if (n === 4 && data.simulations && data.simulations.length) {
+    const sim = data.simulations[0];
+    if (sim.velocities) drawKinetic(sim.velocities);
+    document.getElementById('kp-vmax').textContent = '—';
+    document.getElementById('kp-km').textContent = '—';
+    document.getElementById('kp-v').textContent = sim.velocities ? sim.velocities[1].toFixed(5) : '—';
+    document.getElementById('kp-status').textContent = sim.kinetic_valid ? '✓ VALID' : '✗ FAIL';
+    document.getElementById('kp-status').style.color = sim.kinetic_valid ? 'var(--accent3)' : 'var(--accent4)';
+  }
+
+  loadStats();
+  return data;
+}
+
+function summarizePhase(n, d) {
+  const s = {
+    1: () => `${d.inserted||0} concepts insérés, entropy=${d.entropy||0}`,
+    2: () => `${d.articles||0} articles récoltés, ${d.total_edges||0} edges`,
+    3: () => `${d.hypotheses||0} hypothèses générées`,
+    4: () => `${(d.simulations||[]).length} simulations`,
+    5: () => `${(d.reports||[]).length} pre-prints générés`,
+  };
+  return (s[n] || (() => JSON.stringify(d).substring(0,80)))();
+}
+
+// ---- Auto-Run ----
+async function toggleAuto() {
+  const btn = document.getElementById('btn-auto');
+  if (!autoRunning) {
+    autoRunning = true;
+    btn.textContent = '⏹ STOP';
+    btn.classList.add('active');
+    log('⚡ AUTO-CYCLE démarré', 'warn');
+    runAutoLoop();
+  } else {
+    autoRunning = false;
+    btn.textContent = '▶ START';
+    btn.classList.remove('active');
+    if (autoTimer) clearTimeout(autoTimer);
+    log('⏸ AUTO-CYCLE arrêté', 'dim');
+  }
+}
+
+async function runAutoLoop() {
+  if (!autoRunning) return;
+
+  autoCycle++;
+  document.getElementById('cycle-count').textContent = autoCycle;
+  log(`═══ AUTO-CYCLE #${autoCycle} ═══`, 'warn');
+
+  const phases = [1,2,3,4,5];
+  for (const p of phases) {
+    if (!autoRunning) break;
+    const btn = document.getElementById(`btn-p${p}`);
+    await runPhase(p, btn);
+    await new Promise(r => setTimeout(r, 3000)); // 3s entre phases
+  }
+
+  if (autoRunning) {
+    log('⏳ Pause 60s avant prochain cycle...', 'dim');
+    autoTimer = setTimeout(runAutoLoop, 60000);
+  }
+}
+
+// ---- Result Display ----
+function showResult(data) {
+  const el = document.getElementById('result-display');
+  if (!el) return;
+  
+  const isError = data.error || data.status === 'error';
+  const color = isError ? 'var(--accent4)' : data.status === 'warn' ? 'var(--accent2)' : 'var(--accent3)';
+
+  let html = `<div style="background:var(--panel);border:1px solid ${isError ? 'rgba(255,45,107,0.3)' : 'var(--border)'};border-radius:4px;padding:16px;font-family:'Share Tech Mono',monospace;font-size:11px;">`;
+  html += `<div style="color:${color};font-size:12px;margin-bottom:8px;letter-spacing:2px;">// RÉSULTAT DERNIÈRE ACTION</div>`;
+
+  if (data.phase) html += `<div style="color:var(--accent1)">PHASE ${data.phase} — STATUS: ${data.status?.toUpperCase()}</div>`;
+  if (data.message) html += `<div style="color:var(--text);margin-top:4px">${data.message}</div>`;
+  if (data.analysis) html += `<div style="color:var(--textdim);margin-top:6px">${data.analysis}</div>`;
+  if (data.summary) html += `<div style="color:var(--textdim);margin-top:6px">${data.summary}</div>`;
+  if (data.error) html += `<div style="color:var(--accent4);margin-top:4px">ERROR: ${data.error}</div>`;
+
+  // Phase-specific outputs
+  if (data.simulations) {
+    data.simulations.forEach(sim => {
+      const badge = `<span class="badge ${sim.final_status==='VALIDATED'?'badge-valid':'badge-reject'}">${sim.final_status}</span>`;
+      html += `<div style="margin-top:8px;padding:8px;border:1px solid var(--border);border-radius:3px;">${badge} <b>${sim.concept_a}</b> → <b>${sim.concept_c}</b> | Red Team: ${sim.redteam_verdict} | CV: ${sim.monte_carlo_cv}</div>`;
+    });
+  }
+  if (data.reports) {
+    data.reports.forEach(r => {
+      html += `<div style="margin-top:8px;padding:8px;border:1px solid rgba(0,200,255,0.2);border-radius:3px;"><span class="badge badge-valid">PRE-PRINT</span> <b>${r.title}</b><div style="color:var(--textdim);">${r.relation} | Novelty: ${r.is_novel ? '✓ ABSOLUTE' : r.novelty_count + ' prior art'}</div></div>`;
+    });
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ---- Stats Loader ----
+async function loadStats() {
+  const data = await ajax('get_stats');
+  if (data.error) return;
+
+  // Header
+  document.getElementById('stat-concepts').textContent = data.concepts || 0;
+  document.getElementById('stat-edges').textContent = data.edges || 0;
+  document.getElementById('stat-hypotheses').textContent = data.hypotheses || 0;
+  document.getElementById('stat-complete').textContent = data.complete || 0;
+
+  // Dashboard
+  document.getElementById('d-concepts').textContent = data.concepts || 0;
+  document.getElementById('d-edges').textContent = data.edges || 0;
+  document.getElementById('d-articles').textContent = data.articles || 0;
+  document.getElementById('d-hypotheses').textContent = data.hypotheses || 0;
+  document.getElementById('d-validated').textContent = data.validated || 0;
+  document.getElementById('d-complete').textContent = data.complete || 0;
+
+  // Top concepts
+  if (data.top_concepts) {
+    const tc = document.getElementById('top-concepts');
+    tc.innerHTML = data.top_concepts.map(c => 
+      `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(26,58,92,0.3)">
+        <div style="width:${Math.max(20, (c.degree/Math.max(...data.top_concepts.map(x=>x.degree||1)))*200)}px;height:4px;background:var(--accent1);border-radius:2px;"></div>
+        <span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text)">${c.name}</span>
+        <span style="font-family:'Orbitron',monospace;font-size:11px;color:var(--accent2);margin-left:auto">${c.degree}</span>
+      </div>`
+    ).join('');
+  }
+
+  // Clusters
+  if (data.clusters) {
+    const colors = ['var(--accent1)','var(--accent2)','var(--accent3)','var(--accent4)','#a855f7','#f59e0b'];
+    const cl = document.getElementById('clusters-display');
+    cl.innerHTML = data.clusters.map((c,i) => 
+      `<span class="badge" style="background:rgba(0,200,255,0.06);border-color:${colors[i%6]};color:${colors[i%6]}">CLUSTER ${c.cluster_id}: ${c.cnt} concepts</span>`
+    ).join('');
+  }
+}
+
+// ---- Graph Visualizer ----
+async function loadGraph() {
+  showTab('graph', document.querySelector('.tab:nth-child(3)'));
+  const data = await ajax('get_graph');
+  if (data.error || !data.nodes) return;
+
+  document.getElementById('graph-nodes').textContent = data.nodes.length;
+  document.getElementById('graph-edges').textContent = data.edges.length;
+
+  const canvas = document.getElementById('graphCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  canvas.width = W;
+  canvas.height = H;
+
+  ctx.fillStyle = '#060d14';
+  ctx.fillRect(0, 0, W, H);
+
+  if (!data.nodes.length) return;
+
+  // Position nodes with force-like layout
+  const nodes = {};
+  const clusterColors = ['#00c8ff','#ff6b00','#7fff00','#ff2d6b','#a855f7','#f59e0b'];
+
+  data.nodes.forEach((n, i) => {
+    const angle = (i / data.nodes.length) * Math.PI * 2;
+    const r = Math.min(W, H) * 0.35;
+    const cluster = parseInt(n.cluster_id) || 0;
+    const clusterAngleOffset = cluster * (Math.PI * 2 / 6);
+    const cr = r * (0.4 + (cluster % 3) * 0.2);
+    
+    nodes[n.id] = {
+      x: W/2 + Math.cos(angle + clusterAngleOffset) * cr,
+      y: H/2 + Math.sin(angle + clusterAngleOffset) * cr,
+      color: clusterColors[cluster % clusterColors.length],
+      name: n.name,
+    };
+  });
+
+  // Draw edges
+  data.edges.forEach(e => {
+    const src = nodes[e.source_id];
+    const tgt = nodes[e.target_id];
+    if (!src || !tgt) return;
+    const conf = parseFloat(e.confidence) || 0.5;
+    ctx.beginPath();
+    ctx.moveTo(src.x, src.y);
+    ctx.lineTo(tgt.x, tgt.y);
+    const color = e.relation_type === 'inhibits' ? `rgba(255,45,107,${conf*0.5})` : `rgba(0,200,255,${conf*0.4})`;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = conf * 1.5;
+    ctx.stroke();
+  });
+
+  // Draw nodes
+  Object.values(nodes).forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 5, 0, Math.PI*2);
+    ctx.fillStyle = n.color;
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = n.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(184,212,232,0.7)';
+    ctx.font = '9px "Share Tech Mono"';
+    ctx.fillText(n.name.substring(0,15), n.x+8, n.y+3);
+  });
+}
+
+// ---- Reports Loader ----
+async function loadReports() {
+  showTab('reports', null);
+  const data = await ajax('get_reports');
+  const container = document.getElementById('reports-container');
+  
+  if (!data.reports || !data.reports.length) {
+    container.innerHTML = '<p style="color:var(--textdim);font-family:\'Share Tech Mono\',monospace">Aucun pre-print généré. Complétez les 5 phases du pipeline.</p>';
+    return;
+  }
+
+  container.innerHTML = data.reports.map(r => `
+    <div class="report-item" onclick="this.querySelector('.report-full').style.display = this.querySelector('.report-full').style.display==='none'?'block':'none'">
+      <div class="report-title">${r.title || r.file}</div>
+      <div class="report-meta">📄 ${r.file} · ${r.size} bytes · ${r.created}</div>
+      <div class="report-preview">${r.preview.replace(/</g,'&lt;')}</div>
+      <div class="report-full" style="display:none">${r.preview.replace(/</g,'&lt;')}</div>
+    </div>
+  `).join('');
+}
+
+// ---- Logs ----
+async function loadLogs() {
+  showTab('logs', null);
+  const data = await ajax('get_logs');
+  const el = document.getElementById('sys-logs');
+  if (data.logs) {
+    el.innerHTML = data.logs.split('\n').map(l => `<span class="log-line dim">${l}</span>`).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+// ---- Clear DB ----
+async function confirmClear() {
+  if (!confirm('⚠️ Effacer toute la base de données ? Cette action est irréversible.')) return;
+  const data = await ajax('clear_db');
+  log(data.message || 'DB effacée', data.error ? 'error' : 'warn');
+  loadStats();
+  phaseDone = {1:false,2:false,3:false,4:false,5:false};
+  updateProgress();
+}
+
+// ---- Progress Ring ----
+function updateProgress() {
+  const done = Object.values(phaseDone).filter(Boolean).length;
+  const pct = Math.round((done / 5) * 100);
+  const circumference = 263.9;
+  const offset = circumference - (circumference * pct / 100);
+  document.getElementById('progress-ring').style.strokeDashoffset = offset;
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-phases').innerHTML = [1,2,3,4,5].map(p => 
+    `<div style="color:${phaseDone[p]?'var(--accent3)':'var(--textdim)'}">Phase ${p}: ${phaseDone[p]?'✓ DONE':'⋯'}</div>`
+  ).join('');
+}
+
+// ---- Kinetic Chart ----
+function drawKinetic(velocities) {
+  const canvas = document.getElementById('kineticCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 280;
+  const H = 150;
+  canvas.width = W;
+  canvas.height = H;
+
+  ctx.fillStyle = '#060d14';
+  ctx.fillRect(0, 0, W, H);
+
+  const maxV = Math.max(...velocities, 0.001);
+  const padX = 20, padY = 10;
+  const chartW = W - padX*2;
+  const chartH = H - padY*2;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(26,58,92,0.5)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = padY + (chartH * i / 4);
+    ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W-padX, y); ctx.stroke();
+  }
+
+  // Michaelis-Menten curve (smooth)
+  ctx.beginPath();
+  ctx.strokeStyle = 'var(--accent2)';
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 8;
+  ctx.shadowColor = 'var(--accent2)';
+
+  velocities.forEach((v, i) => {
+    const x = padX + (i / (velocities.length - 1)) * chartW;
+    const y = padY + chartH - (v / maxV) * chartH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Points
+  velocities.forEach((v, i) => {
+    const x = padX + (i / (velocities.length - 1)) * chartW;
+    const y = padY + chartH - (v / maxV) * chartH;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI*2);
+    ctx.fillStyle = 'var(--accent1)';
+    ctx.fill();
+  });
+}
+
+// ---- Tab Switcher ----
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const pane = document.getElementById(`tab-${name}`);
+  if (pane) pane.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (name === 'dashboard') loadStats();
+  if (name === 'graph') setTimeout(loadGraph, 100);
+  if (name === 'reports') loadReports();
+  if (name === 'logs') loadLogs();
+}
+
+// ---- Init ----
+document.addEventListener('DOMContentLoaded', () => {
+  loadStats();
+  updateProgress();
+  drawKinetic([0.001, 0.09, 0.33, 0.66, 0.90]); // Default curve
+  setInterval(loadStats, 30000); // Auto-refresh every 30s
+});
+</script>
 </body>
 </html>
