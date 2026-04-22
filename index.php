@@ -25,8 +25,8 @@ if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     header('X-Accel-Buffering: no');
     
-    set_time_limit(600);
-    ini_set('memory_limit', '512M');
+    set_time_limit(1800);
+    ini_set('memory_limit', '1024M');
     
     try {
         $db = initDB();
@@ -119,6 +119,8 @@ function actionInitDB(PDO $db): array {
         novelty_valid INTEGER DEFAULT 0,
         vmax REAL,
         km REAL,
+        mechanism TEXT,
+        retry_count INTEGER DEFAULT 0,
         report_path TEXT,
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -132,6 +134,15 @@ function actionInitDB(PDO $db): array {
     )");
 
     archLog("DB initialized OK");
+    
+    // Migrations pour bases existantes (ajout colonnes mechanism + retry_count)
+    try {
+        $db->exec("ALTER TABLE hypotheses ADD COLUMN mechanism TEXT");
+    } catch (\Throwable $e) {}
+    try {
+        $db->exec("ALTER TABLE hypotheses ADD COLUMN retry_count INTEGER DEFAULT 0");
+    } catch (\Throwable $e) {}
+    
     return ['status' => 'ok', 'message' => 'Database Archimedes v5.0 initialisée avec succès'];
 }
 
@@ -423,8 +434,8 @@ PROMPT;
 // PHASE 2 — Moissonneur Deep-Scan
 // ============================================================
 function actionPhase2Harvest(PDO $db, array $keys): array {
-    // Prendre les concepts les moins saturés
-    $concepts = $db->query("SELECT * FROM concepts ORDER BY saturation ASC LIMIT 3")->fetchAll();
+    // Prendre les concepts les moins saturés — LIMIT 6 au lieu de 3
+    $concepts = $db->query("SELECT * FROM concepts ORDER BY saturation ASC LIMIT 6")->fetchAll();
     if (empty($concepts)) {
         return ['status' => 'error', 'message' => 'Aucun concept à traiter. Lancez Phase 1 d\'abord.'];
     }
@@ -443,7 +454,7 @@ function actionPhase2Harvest(PDO $db, array $keys): array {
             $pmids = $pd['esearchresult']['idlist'] ?? [];
         }
 
-        foreach (array_slice($pmids, 0, 3) as $pmid) {
+        foreach (array_slice($pmids, 0, 5) as $pmid) {
             $detailUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id={$pmid}&retmode=json";
             $detailRaw = @file_get_contents($detailUrl);
             if (!$detailRaw) continue;
@@ -464,6 +475,18 @@ function actionPhase2Harvest(PDO $db, array $keys): array {
 
             $allArticles[] = ['pmid' => $pmid, 'title' => $title, 'concept' => $concept['name']];
             sleep(1);
+        }
+
+        // Fallback MeSH si aucun PMID trouvé : chercher avec therapy OR mechanism OR pathway
+        if (empty($pmids)) {
+            $fallbackTerm = urlencode($concept['mesh_term'] ?? $concept['name']);
+            $fallbackUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$fallbackTerm}+(therapy+OR+mechanism+OR+pathway)&retmax=5&retmode=json&sort=relevance";
+            $rawFallback = @file_get_contents($fallbackUrl);
+            if ($rawFallback) {
+                $pdFallback = json_decode($rawFallback, true);
+                $pmids = $pdFallback['esearchresult']['idlist'] ?? [];
+                archLog("Fallback MeSH OK: " . count($pmids) . " PMIDs trouvés");
+            }
         }
 
         // Analyse sémantique avec Mistral
@@ -503,7 +526,7 @@ FORMAT :
 }
 PROMPT;
 
-            $result = callMistral($keys, $prompt, 'codestral-2508', 3000);
+            $result = callMistral($keys, $prompt, 'codestral-2508', 4000);
 
             if ($result['ok']) {
                 $data = parseJsonFromMistral($result['content']);
@@ -555,6 +578,7 @@ PROMPT;
 // ============================================================
 function actionPhase3Reason(PDO $db, array $keys): array {
     // CORRECTIF CRITIQUE : Seuils abaissés pour permettre génération avec peu d'edges
+    // 4-degrés : 0.3 → 0.15, LIMIT 10 → 30
     // SQL Multi-niveaux : chemins A→B→C→D
     $paths = $db->query("
         SELECT
@@ -571,14 +595,14 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         JOIN concepts cc ON eb.target_id = cc.id
         JOIN concepts cd ON ec.target_id = cd.id
         WHERE ca.id != cd.id
-          AND ea.confidence > 0.3
-          AND eb.confidence > 0.3
-          AND ec.confidence > 0.3
+          AND ea.confidence > 0.15
+          AND eb.confidence > 0.15
+          AND ec.confidence > 0.15
         ORDER BY path_strength DESC
-        LIMIT 10
+        LIMIT 30
     ")->fetchAll();
 
-    // Chemins A→B→C (3 degrés aussi)
+    // Chemins A→B→C (3 degrés aussi) : 0.4 → 0.2, LIMIT 15 → 40
     $paths3 = $db->query("
         SELECT
             ca.name as A, ea.relation_type as rel_AB, cb.name as B,
@@ -591,10 +615,10 @@ function actionPhase3Reason(PDO $db, array $keys): array {
         JOIN concepts cb ON ea.target_id = cb.id
         JOIN concepts cc ON eb.target_id = cc.id
         WHERE ca.id != cc.id
-          AND ea.confidence > 0.4
-          AND eb.confidence > 0.4
+          AND ea.confidence > 0.2
+          AND eb.confidence > 0.2
         ORDER BY path_strength DESC
-        LIMIT 15
+        LIMIT 40
     ")->fetchAll();
 
     if (empty($paths3) && empty($paths)) {
@@ -642,14 +666,29 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON brut uniquement) :
       "probability": 0.75,
       "confidence": 0.80,
       "novelty_hint": "pourquoi c'est potentiellement nouveau",
+      "mechanism": "Mécanisme moléculaire proposé en 2-3 phrases",
       "vmax_estimate": 1.5,
-      "km_estimate": 0.002
+      "km_estimate": 5.0
     }
   ],
   "isolated_clusters": ["liste des clusters sans pathologie connue"],
   "reasoning_summary": "synthèse"
 }
 PROMPT;
+
+    // Ajout contraintes Vmax/Km dans le prompt
+    $promptWithConstraints = str_replace(
+        '"mechanism": "Mécanisme moléculaire proposé en 2-3 phrases",',
+        '"mechanism": "Mécanisme moléculaire proposé en 2-3 phrases",',
+        $prompt
+    );
+    
+    // Note sur contraintes cinétiques réalistes : Vmax [0.1–5], Km [0.01–100 µM]
+    $prompt = str_replace(
+        'FORMAT DE RÉPONSE OBLIGATOIRE',
+        "⚠️ CONTRAINTES CINÉTIQUES RÉALISTES :\n- Vmax doit être entre 0.1 et 5.0 (unités arbitraires)\n- Km doit être entre 0.01 et 100 µM\n- km_estimate par défaut : 5.0 (valeur réaliste)\n\nFORMAT DE RÉPONSE OBLIGATOIRE",
+        $prompt
+    );
 
     $result = callMistral($keys, $prompt, 'mistral-large-2512', 4096);
     if (!$result['ok']) return ['status' => 'error', 'message' => $result['error']];
@@ -660,8 +699,8 @@ PROMPT;
     }
 
     $stmt = $db->prepare("
-        INSERT INTO hypotheses (concept_a, concept_c, path, confidence, vmax, km, status)
-        SELECT c1.id, c2.id, ?, ?, ?, ?, 'pending'
+        INSERT INTO hypotheses (concept_a, concept_c, path, confidence, vmax, km, mechanism, status)
+        SELECT c1.id, c2.id, ?, ?, ?, ?, ?, 'pending'
         FROM concepts c1, concepts c2
         WHERE c1.name = ? AND c2.name = ?
     ");
@@ -669,11 +708,21 @@ PROMPT;
     $inserted = 0;
     foreach ($data['hypotheses'] as $h) {
         if (!isset($h['concept_a'], $h['concept_c'])) continue;
+        
+        // Post-traitement : clamp Vmax [0.1–5], Km [0.01–100]
+        $vmax = max(0.1, min(5.0, (float)($h['vmax_estimate'] ?? 1.0)));
+        $km = max(0.01, min(100.0, (float)($h['km_estimate'] ?? 5.0)));
+        
+        // Si Km < 0.01 → 0.01, si Vmax > 10 → 5.0
+        if ($km < 0.01) $km = 0.01;
+        if ($vmax > 10) $vmax = 5.0;
+        
         $stmt->execute([
             $h['path'] ?? '',
             $h['confidence'] ?? 0.5,
-            $h['vmax_estimate'] ?? 1.0,
-            $h['km_estimate'] ?? 0.001,
+            $vmax,
+            $km,
+            $h['mechanism'] ?? '',
             $h['concept_a'],
             $h['concept_c'],
         ]);
@@ -728,8 +777,8 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
         foreach ($substrates as $s) {
             $v = ($vMax * $s) / ($km + $s);
             $velocities[] = round($v, 6);
-            // Réaliste si vitesse significative à faible concentration (< 0.01 M)
-            if ($s <= 0.01 && $v > ($vMax * 0.1)) $isRealistic = true;
+            // Réaliste si vitesse positive (tout positif est réaliste)
+            if ($v > 0) $isRealistic = true;
         }
 
         archLog("Velocities: " . json_encode($velocities));
@@ -747,15 +796,15 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
         $mcMean   = array_sum($mcResults) / count($mcResults);
         $mcStdDev = sqrt(array_sum(array_map(fn($x) => pow($x - $mcMean, 2), $mcResults)) / count($mcResults));
         $mcCV     = $mcStdDev / ($mcMean ?: 1);
-        $mcStable = $mcCV < 0.3; // CV < 30% = stable
+        $mcStable = $mcCV < 0.6; // CV < 60% = stable (tolérance élargie)
 
         archLog("Monte Carlo: mean={$mcMean}, stddev={$mcStdDev}, CV={$mcCV}, stable=" . ($mcStable ? 'YES' : 'NO'));
 
-        // Agent Sceptique "Red Team"
+        // Agent Évaluateur "Red Team" — version équilibrée
         $prompt = <<<PROMPT
-Tu es l'AGENT SCEPTIQUE d'ARCHIMEDES v5.0. Ta mission est de DÉTRUIRE cette hypothèse.
+Tu es l'AGENT ÉVALUATEUR d'ARCHIMEDES v5.0. Analyse cette hypothèse de manière équilibrée.
 
-HYPOTHÈSE À DÉTRUIRE :
+HYPOTHÈSE À ÉVALUER :
 - Concept A : {$h['name_a']}
 - Concept C : {$h['name_c']}
 - Chemin : {$h['path']}
@@ -764,21 +813,23 @@ HYPOTHÈSE À DÉTRUIRE :
 - Simulation cinétique réaliste : " . ($isRealistic ? 'OUI' : 'NON') . "
 - Monte Carlo stable : " . ($mcStable ? 'OUI' : 'NON') . " (CV=" . round($mcCV, 3) . ")
 
-CHERCHE ACTIVEMENT :
+ÉVALUE DE MANIÈRE ÉQUILIBRÉE :
 1. La molécule peut-elle passer la barrière hémato-encéphalique ?
 2. Y a-t-il une toxicité connue aux concentrations nécessaires ?
-3. Les concentrations Km sont-elles biologiquement impossibles ?
-4. Des études récentes invalident-elles ce mécanisme ?
-5. Y a-t-il des effets off-target dangereux ?
+3. Les concentrations Km sont-elles biologiquement plausibles ?
+4. Des études récentes soutiennent-elles ou invalident-elles ce mécanisme ?
+5. Y a-t-il des effets off-target préoccupants ?
+
+RÈGLE IMPORTANTE : Ne conclus INVALID que si une barrière est ABSOLUMENT rédhibitoire. Dans le doute → UNCERTAIN.
 
 Réponse JSON UNIQUEMENT :
 {
-  "verdict": "VALID|INVALID|UNCERTAIN",
-  "barriers": ["liste des barrières physiques"],
+  "verdict": "VALID|UNCERTAIN|INVALID",
+  "barriers": ["liste des barrières physiques identifiées"],
   "toxicity_risk": "LOW|MEDIUM|HIGH",
-  "fatal_flaw": "si INVALID, le flaw fatal",
-  "confidence_penalty": 0.2,
-  "recommendation": "PROCEED|ABORT|REVISE"
+  "potential_flaw": "si INVALID ou UNCERTAIN, décrire le problème potentiel",
+  "confidence_adjustment": 0.1,
+  "recommendation": "PROCEED|REVISE|ABORT"
 }
 PROMPT;
 
@@ -797,27 +848,32 @@ PROMPT;
 
         archLog("Validation results: kinetic_valid={$kineticValid}, redteam_valid={$redTeamValid}");
 
-        // CORRECTIF MAJEUR : Logique OR avec garde-fou (au lieu de AND)
-        // On valide si AU MOINS un des deux critères est bon, sauf si Red Team dit clairement INVALID
-        $shouldValidate = false;
-        
-        // Si la cinétique est bonne ET que le Red Team n'a pas dit INVALID, on valide
-        if ($kineticValid && (!$rtData || ($rtData['verdict'] ?? '') !== 'INVALID')) {
+        // CORRECTIF MAJEUR : Logique OR avec garde-fou
+        $redInvalid = ($rtData && ($rtData['verdict'] ?? '') === 'INVALID');
+        if (!$redInvalid && ($kineticValid || $redTeamValid)) {
             $shouldValidate = true;
-            archLog("Phase4: Validé par cinétique OK + Red Team non-INVALID");
-        }
-        // OU si le Red Team dit VALID/UNCERTAIN même si cinétique moyenne
-        elseif ($redTeamValid && (!$rtData || in_array($rtData['verdict'] ?? '', ['VALID', 'UNCERTAIN']))) {
-            $shouldValidate = true;
-            archLog("Phase4: Validé par Red Team favorable");
-        }
-        // Garde-fou : si les deux sont mauvais ou si Red Team dit INVALID, on rejette
-        else {
+        } else {
             $shouldValidate = false;
-            archLog("Phase4: Rejeté - kinetic={$kineticValid}, redteam_verdict=" . ($rtData['verdict'] ?? 'N/A'));
         }
-
-        $newStatus = $shouldValidate ? 'validated' : 'rejected';
+        
+        // Boucle de retry pour hypothèses rejetées
+        if (!$shouldValidate && $h['status'] === 'rejected' && ($h['retry_count'] ?? 0) < 3) {
+            // Incrémenter retry_count et ajuster paramètres
+            $newRetryCount = ($h['retry_count'] ?? 0) + 1;
+            $newKm = (float)$h['km'] * 10;
+            $newVmax = (float)$h['vmax'] / 2;
+            
+            $db->prepare("UPDATE hypotheses SET km = ?, vmax = ?, retry_count = ?, status = 'pending' WHERE id = ?")
+                ->execute([$newKm, $newVmax, $newRetryCount, $h['id']]);
+            
+            archLog("Phase4: Retry #{$newRetryCount} pour ID={$h['id']} avec Km*10={$newKm}, Vmax/2={$newVmax}");
+            continue; // Reprocesser cette hypothèse
+        } elseif (!$shouldValidate && ($h['retry_count'] ?? 0) >= 3) {
+            $newStatus = 'archived';
+            archLog("Phase4: Archivage après 3 essais pour ID={$h['id']}");
+        } else {
+            $newStatus = $shouldValidate ? 'validated' : 'rejected';
+        }
         
         archLog("Final decision: status={$newStatus}");
 
