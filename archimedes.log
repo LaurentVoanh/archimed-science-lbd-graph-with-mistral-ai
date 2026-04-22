@@ -1,0 +1,1443 @@
+[2026-04-22 15:40:50] DB initialized OK
+[2026-04-22 15:41:07] === MISTRAL CALL START ===
+[2026-04-22 15:41:07] Context: general
+[2026-04-22 15:41:07] Model: mistral-large-2512, MaxTokens: 4096
+[2026-04-22 15:41:07] Prompt length: 1096 chars
+[2026-04-22 15:41:07] Prompt preview (first 1000 chars): Tu es ARCHIMEDES v5.0, moteur de découverte scientifique autonome.
+
+MISSION PHASE 1 — ONTOLOGIE AUTO-GÉNÉRATRICE :
+État de la base : 1853 concepts, Clusters isolés détectés : [{"ca":0,"cb":2,"links":0},{"ca":0,"cb":3,"links":0},{"ca":0,"cb":4,"links":0}]
+
+Génère une ontologie de 15 nouveaux concepts scientifiques couvrant des domaines qui ne se croisent jamais habituellement (ex: physique des plasmas + oncologie, biologie marine + neurosciences, cryptographie + génomique).
+
+RÈGLES ABSOLUES :
+- Utilise exclusivement des termes MeSH anglais pour chaque concept
+- Assigne chaque concept à un cluster (0-5) et un domaine
+- Identifie les "ponts" potentiels entre clusters isolés
+- Réponds UNIQUEMENT en JSON valide, aucun texte parasite
+
+FORMAT JSON OBLIGATOIRE :
+{
+  "concepts": [
+    {
+      "name": "nom_technique_anglais",
+      "mesh_term": "terme_MeSH_officiel",
+      "domain": "domaine_scientifique",
+      "cluster_id": 0,
+      "bridge_potential": ["concept_a", "concept_b"
+[2026-04-22 15:41:07] Prompt continued... (total 1096 chars)
+[2026-04-22 15:41:07] Attempt 1/3 with key 5qa***ake
+[2026-04-22 15:41:07] Payload JSON length: 1337 bytes
+[2026-04-22 15:41:07] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:41:27] Raw response received (5063 bytes)
+[2026-04-22 15:41:27] Response preview (first 1000 chars): {"id":"cbf6dc86018142a68a25d7e0cb581296","created":1776872467,"model":"mistral-large-2512","usage":{"prompt_tokens":332,"total_tokens":1612,"completion_tokens":1280,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"concepts\": [\n    {\n      \"name\": \"PlasmaOncologySynapse\",\n      \"mesh_term\": \"Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology\",\n      \"domain\": \"Physics-Oncology-Neuroscience\",\n      \"cluster_id\": 1,\n      \"bridge_potential\": [\"ca:0\", \"cb:2\"]\n    },\n    {\n      \"name\": \"CrypToxGenome\",\n      \"mesh_term\": \"Cryptography AND Genomics AND Marine Toxins/genetics\",\n      \"domain\": \"Cryptography-Genomics-Marine Biology\",\n      \"cluster_id\": 2,\n      \"bridge_potential\": [\"ca:0\", \"cb:3\"]\n    },\n    {\n      \"name\": \"NeuroCoralSymbiosis\",\n      \"mesh_term\":
+[2026-04-22 15:41:27] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:41:27] Response length: 5063 bytes
+[2026-04-22 15:41:27] Response first 2000 chars: {"id":"cbf6dc86018142a68a25d7e0cb581296","created":1776872467,"model":"mistral-large-2512","usage":{"prompt_tokens":332,"total_tokens":1612,"completion_tokens":1280,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"concepts\": [\n    {\n      \"name\": \"PlasmaOncologySynapse\",\n      \"mesh_term\": \"Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology\",\n      \"domain\": \"Physics-Oncology-Neuroscience\",\n      \"cluster_id\": 1,\n      \"bridge_potential\": [\"ca:0\", \"cb:2\"]\n    },\n    {\n      \"name\": \"CrypToxGenome\",\n      \"mesh_term\": \"Cryptography AND Genomics AND Marine Toxins/genetics\",\n      \"domain\": \"Cryptography-Genomics-Marine Biology\",\n      \"cluster_id\": 2,\n      \"bridge_potential\": [\"ca:0\", \"cb:3\"]\n    },\n    {\n      \"name\": \"NeuroCoralSymbiosis\",\n      \"mesh_term\": \"Coral Reefs AND Neurogenesis AND Symbiosis/physiology\",\n      \"domain\": \"Marine Biology-Neuroscience\",\n      \"cluster_id\": 3,\n      \"bridge_potential\": [\"cb:2\", \"cb:4\"]\n    },\n    {\n      \"name\": \"QuantumEpigeneticClock\",\n      \"mesh_term\": \"Quantum Dots AND Epigenomics AND Chronobiology Disorders\",\n      \"domain\": \"Quantum Physics-Epigenetics-Chronobiology\",\n      \"cluster_id\": 4,\n      \"bridge_potential\": [\"ca:0\", \"cb:4\"]\n    },\n    {\n      \"name\": \"BioPhononicCryptography\",\n      \"mesh_term\": \"Biological Phenomena/acoustics AND Cryptography AND Phonons\",\n      \"domain\": \"Biophysics-Cryptography-Condensed Matter Physics\",\n      \"cluster_id\": 1,\n      \"bridge_potential\": [\"ca:0\", \"cb:2\"]\n    },\n    {\n      \"name\": \"AstroVirology\",\n      \"mesh_term\": \"Extraterrestrial Environment AND Viruses AND Space Flight\",\n      \"domain\": \"Astrobiology-Virology\",\n      \"cluster_id\": 5,\n      \"bridge_poten
+[2026-04-22 15:41:27] SUCCESS: Content received (4297 chars)
+[2026-04-22 15:41:27] Response content preview (first 1000 chars): ```json
+{
+  "concepts": [
+    {
+      "name": "PlasmaOncologySynapse",
+      "mesh_term": "Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology",
+      "domain": "Physics-Oncology-Neuroscience",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "CrypToxGenome",
+      "mesh_term": "Cryptography AND Genomics AND Marine Toxins/genetics",
+      "domain": "Cryptography-Genomics-Marine Biology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "NeuroCoralSymbiosis",
+      "mesh_term": "Coral Reefs AND Neurogenesis AND Symbiosis/physiology",
+      "domain": "Marine Biology-Neuroscience",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "QuantumEpigeneticClock",
+      "mesh_term": "Quantum Dots AND Epigenomics AND Chronobiology Disorders",
+      "domain": "Quantum Physics-Epigenetics-Chronobiology",
+      "cluster_id": 4,
+      "bridge_potenti
+[2026-04-22 15:41:27] Full response structure: {"id":"cbf6dc86018142a68a25d7e0cb581296","created":1776872467,"model":"mistral-large-2512","usage":{"prompt_tokens":332,"total_tokens":1612,"completion_tokens":1280,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"concepts\": [\n    {\n      \"name\": \"PlasmaOncologySynapse\",\n      \"mesh_term\": \"Plasma Gases\/therapeutic use AND Neoplasms\/therapy AND Synapses\/physiology\",\n      \"domain\": \"Physics-Oncology-Neuroscience\",\n      \"cluster_id\": 1,\n      \"bridge_potential\": [\"ca:0\", \"cb:2\"]\n    },\n    {\n      \"name\": \"CrypToxGenome\",\n      \"mesh_term\": \"Cryptography AND Genomics AND Marine Toxins\/genetics\",\n      \"domain\": \"Cryptography-Genomics-Marine Biology\",\n      \"cluster_id\": 2,\n      \"bridge_potential\": [\"ca:0\", \"cb:3\"]\n    },\n    {\n      \"name\": \"NeuroCoralSymbiosis\",\n      \"mesh_term\": \"Coral Reefs AND Neurogenesis AND Symbiosis\/physiology\",\n      \"domain\": \"Marine Biology-Neuroscience\",\n      \"cluster_id\": 3,\n      \"bridge_potential\": [\"cb:2\", \"cb:4\"]\n    },\n    {\n      \"name\": \"QuantumEpigeneticClock\",\n      \"mesh_term\": \"Quantum Dots AND Epigenomics AND Chronobiology Disorders\",\n      \"domain\": \"Quantum Physics-Epigenetics-Chronobiology\",\n      \"cluster_id\": 4,\n      \"bridge_potential\": [\"ca:0\", \"cb:4\"]\n    },\n    {\n      \"name\": \"BioPhononicCryptography\",\n      \"mesh_term\": \"Biological Phenomena\/acoustics AND Cryptography AND Phonons\",\n      \"domain\": \"Biophysics-Cryptography-Condensed Matter Physics\",\n      \"cluster_id\": 1,\n      \"bridge_potential\": [\"ca:0\", \"cb:2\"]\n    },\n    {\n      \"name\": \"AstroVirology\",\n      \"mesh_term\": \"Extraterrestrial Environment AND Viruses AND Space Flight\",\n      \"domain\": \"Astrobiology-Virology\",\n      \"cluster_id\": 5,\n      \"bridge_potential\": [\"cb:3\", \"cb:4\"]\n    },\n    {\n      \"name\": \"MagnetoOncology\",\n      \"mesh_term\": \"Magnetics AND Neoplasms\/metabolism AND Ferroptosis\",\n      \"domain\": \"Physics-Oncology\",\n      \"cluster_id\": 2,\n      \"bridge_potential\": [\"ca:0\", \"cb:3\"]\n    },\n    {\n      \"name\": \"NeuroCryptoEndocrinology\",\n      \"mesh_term\": \"Neurosecretory Systems AND Cryptography AND Endocrine Disruptors\",\n      \"domain\": \"Neuroscience-Cryptography-Endocrinology\",\n      \"cluster_id\": 3,\n      \"bridge_potential\": [\"cb:2\", \"cb:4\"]\n    },\n    {\n      \"name\": \"PlasmaMarineEcology\",\n      \"mesh_term\": \"Plasma Gases\/analysis AND Marine Biology AND Ecosystem\",\n      \"domain\": \"Physics-Marine Biology-Ecology\",\n      \"cluster_id\": 4,\n      \"bridge_potential\": [\"ca:0\", \"cb:4\"]\n    },\n    {\n      \"name\": \"QuantumBioCoral\",\n      \"mesh_term\": \"Quantum Biology AND Coral Reefs AND Photosynthesis\",\n      \"domain\": \"Quantum Physics-Marine Biology\",\n      \"cluster_id\": 1,\n      \"bridge_potential\": [\"ca:0\", \"cb:2\"]\n    },\n    {\n      \"name\": \"CryptoNeuroImmunology\",\n      \"mesh_term\": \"Cryptography AND Neuroimmunomodulation AND Immune System\",\n      \"domain\": \"Cryptography-Neuroscience-Immunology\",\n      \"cluster_id\": 2,\n      \"bridge_potential\": [\"ca:0\", \"cb:3\"]\n    },\n    {\n      \"name\": \"AstroOncology\",\n      \"mesh_term\": \"Space Flight AND Neoplasms\/radiation effects AND Cosmic Radiation\",\n      \"domain\": \"Astrobiology-Oncology\",\n      \"cluster_id\": 5,\n      \"bridge_potential\": [\"cb:3\", \"cb:4\"]\n    },\n    {\n      \"name\": \"PhononGenomics\",\n      \"mesh_term\": \"Phonons AND Genomics AND Gene Expression Regulation\",\n      \"domain\": \"Condensed Matter Physics-Genomics\",\n      \"cluster_id\": 3,\n      \"bridge_potential\": [\"cb:2\", \"cb:4\"]\n    },\n    {\n      \"name\": \"NeuroPlasmaMarine\",\n      \"mesh_term\": \"Neurogenesis AND Plasma Gases AND Marine Toxins\/pharmacology\",\n      \"domain\": \"Neuroscience-Physics-Marine Biology\",\n      \"cluster_id\": 4,\n      \"bridge_potential\": [\"ca:0\", \"cb:4\"]\n    },\n    {\n      \"name\": \"CryptoAstroVirome\",\n      \"mesh_term\": \"Cryptography AND Extraterrestrial Environment AND Virome\",\n      \"domain\": \"Cryptography-Astrobiology-Virology\",\n      \"cluster_id\": 5,\n      \"bridge_potential\": [\"cb:3\", \"cb:4\"]\n    }\n  ],\n  \"analysis\": \"The generated concepts strategically bridge isolated clusters (0-2, 0-3, 0-4) by combining domains with minimal historical overlap. Physics (plasma\/quantum) is linked to oncology, marine biology, and neuroscience via therapeutic, ecological, and neurogenetic mechanisms. Cryptography is integrated with genomics, neuroimmunology, and astrobiology through data security, bioinformatics, and extraterrestrial data transmission. The entropy score reflects high interdisciplinary novelty while maintaining MeSH term validity.\",\n  \"entropy_score\": 0.92\n}\n```"}}]}
+[2026-04-22 15:41:27] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:41:28] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:41:28] parseJsonFromMistral: Raw input length=4297
+[2026-04-22 15:41:28] parseJsonFromMistral: Raw preview (first 1000 chars): ```json
+{
+  "concepts": [
+    {
+      "name": "PlasmaOncologySynapse",
+      "mesh_term": "Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology",
+      "domain": "Physics-Oncology-Neuroscience",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "CrypToxGenome",
+      "mesh_term": "Cryptography AND Genomics AND Marine Toxins/genetics",
+      "domain": "Cryptography-Genomics-Marine Biology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "NeuroCoralSymbiosis",
+      "mesh_term": "Coral Reefs AND Neurogenesis AND Symbiosis/physiology",
+      "domain": "Marine Biology-Neuroscience",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "QuantumEpigeneticClock",
+      "mesh_term": "Quantum Dots AND Epigenomics AND Chronobiology Disorders",
+      "domain": "Quantum Physics-Epigenetics-Chronobiology",
+      "cluster_id": 4,
+      "bridge_potenti
+[2026-04-22 15:41:28] parseJsonFromMistral: Raw full content: ```json
+{
+  "concepts": [
+    {
+      "name": "PlasmaOncologySynapse",
+      "mesh_term": "Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology",
+      "domain": "Physics-Oncology-Neuroscience",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "CrypToxGenome",
+      "mesh_term": "Cryptography AND Genomics AND Marine Toxins/genetics",
+      "domain": "Cryptography-Genomics-Marine Biology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "NeuroCoralSymbiosis",
+      "mesh_term": "Coral Reefs AND Neurogenesis AND Symbiosis/physiology",
+      "domain": "Marine Biology-Neuroscience",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "QuantumEpigeneticClock",
+      "mesh_term": "Quantum Dots AND Epigenomics AND Chronobiology Disorders",
+      "domain": "Quantum Physics-Epigenetics-Chronobiology",
+      "cluster_id": 4,
+      "bridge_potential": ["ca:0", "cb:4"]
+    },
+    {
+      "name": "BioPhononicCryptography",
+      "mesh_term": "Biological Phenomena/acoustics AND Cryptography AND Phonons",
+      "domain": "Biophysics-Cryptography-Condensed Matter Physics",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "AstroVirology",
+      "mesh_term": "Extraterrestrial Environment AND Viruses AND Space Flight",
+      "domain": "Astrobiology-Virology",
+      "cluster_id": 5,
+      "bridge_potential": ["cb:3", "cb:4"]
+    },
+    {
+      "name": "MagnetoOncology",
+      "mesh_term": "Magnetics AND Neoplasms/metabolism AND Ferroptosis",
+      "domain": "Physics-Oncology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "NeuroCryptoEndocrinology",
+      "mesh_term": "Neurosecretory Systems AND Cryptography AND Endocrine Disruptors",
+      "domain": "Neuroscience-Cryptography-Endocrinology",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "PlasmaMarineEcology",
+      "mesh_term": "Plasma Gases/analysis AND Marine Biology AND Ecosystem",
+      "domain": "Physics-Marine Biology-Ecology",
+      "cluster_id": 4,
+      "bridge_potential": ["ca:0", "cb:4"]
+    },
+    {
+      "name": "QuantumBioCoral",
+      "mesh_term": "Quantum Biology AND Coral Reefs AND Photosynthesis",
+      "domain": "Quantum Physics-Marine Biology",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "CryptoNeuroImmunology",
+      "mesh_term": "Cryptography AND Neuroimmunomodulation AND Immune System",
+      "domain": "Cryptography-Neuroscience-Immunology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "AstroOncology",
+      "mesh_term": "Space Flight AND Neoplasms/radiation effects AND Cosmic Radiation",
+      "domain": "Astrobiology-Oncology",
+      "cluster_id": 5,
+      "bridge_potential": ["cb:3", "cb:4"]
+    },
+    {
+      "name": "PhononGenomics",
+      "mesh_term": "Phonons AND Genomics AND Gene Expression Regulation",
+      "domain": "Condensed Matter Physics-Genomics",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "NeuroPlasmaMarine",
+      "mesh_term": "Neurogenesis AND Plasma Gases AND Marine Toxins/pharmacology",
+      "domain": "Neuroscience-Physics-Marine Biology",
+      "cluster_id": 4,
+      "bridge_potential": ["ca:0", "cb:4"]
+    },
+    {
+      "name": "CryptoAstroVirome",
+      "mesh_term": "Cryptography AND Extraterrestrial Environment AND Virome",
+      "domain": "Cryptography-Astrobiology-Virology",
+      "cluster_id": 5,
+      "bridge_potential": ["cb:3", "cb:4"]
+    }
+  ],
+  "analysis": "The generated concepts strategically bridge isolated clusters (0-2, 0-3, 0-4) by combining domains with minimal historical overlap. Physics (plasma/quantum) is linked to oncology, marine biology, and neuroscience via therapeutic, ecological, and neurogenetic mechanisms. Cryptography is integrated with genomics, neuroimmunology, and astrobiology through data security, bioinformatics, and extraterrestrial data transmission. The entropy score reflects high interdisciplinary novelty while maintaining MeSH term validity.",
+  "entropy_score": 0.92
+}
+```
+[2026-04-22 15:41:28] parseJsonFromMistral: Extracted JSON block from 8 to 4292
+[2026-04-22 15:41:28] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "concepts": [
+    {
+      "name": "PlasmaOncologySynapse",
+      "mesh_term": "Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology",
+      "domain": "Physics-Oncology-Neuroscience",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "CrypToxGenome",
+      "mesh_term": "Cryptography AND Genomics AND Marine Toxins/genetics",
+      "domain": "Cryptography-Genomics-Marine Biology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "NeuroCoralSymbiosis",
+      "mesh_term": "Coral Reefs AND Neurogenesis AND Symbiosis/physiology",
+      "domain": "Marine Biology-Neuroscience",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "QuantumEpigeneticClock",
+      "mesh_term": "Quantum Dots AND Epigenomics AND Chronobiology Disorders",
+      "domain": "Quantum Physics-Epigenetics-Chronobiology",
+      "cluster_id": 4,
+      "bridge_potential": ["c
+[2026-04-22 15:41:28] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "concepts": [
+    {
+      "name": "PlasmaOncologySynapse",
+      "mesh_term": "Plasma Gases/therapeutic use AND Neoplasms/therapy AND Synapses/physiology",
+      "domain": "Physics-Oncology-Neuroscience",
+      "cluster_id": 1,
+      "bridge_potential": ["ca:0", "cb:2"]
+    },
+    {
+      "name": "CrypToxGenome",
+      "mesh_term": "Cryptography AND Genomics AND Marine Toxins/genetics",
+      "domain": "Cryptography-Genomics-Marine Biology",
+      "cluster_id": 2,
+      "bridge_potential": ["ca:0", "cb:3"]
+    },
+    {
+      "name": "NeuroCoralSymbiosis",
+      "mesh_term": "Coral Reefs AND Neurogenesis AND Symbiosis/physiology",
+      "domain": "Marine Biology-Neuroscience",
+      "cluster_id": 3,
+      "bridge_potential": ["cb:2", "cb:4"]
+    },
+    {
+      "name": "QuantumEpigeneticClock",
+      "mesh_term": "Quantum Dots AND Epigenomics AND Chronobiology Disorders",
+      "domain": "Quantum Physics-Epigenetics-Chronobiology",
+      "cluster_id": 4,
+      "bridge_potential": ["c
+[2026-04-22 15:41:28] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:41:28] parseJsonFromMistral: Decoded data structure: {"concepts":[{"name":"PlasmaOncologySynapse","mesh_term":"Plasma Gases\/therapeutic use AND Neoplasms\/therapy AND Synapses\/physiology","domain":"Physics-Oncology-Neuroscience","cluster_id":1,"bridge_potential":["ca:0","cb:2"]},{"name":"CrypToxGenome","mesh_term":"Cryptography AND Genomics AND Marine Toxins\/genetics","domain":"Cryptography-Genomics-Marine Biology","cluster_id":2,"bridge_potential":["ca:0","cb:3"]},{"name":"NeuroCoralSymbiosis","mesh_term":"Coral Reefs AND Neurogenesis AND Symbiosis\/physiology","domain":"Marine Biology-Neuroscience","cluster_id":3,"bridge_potential":["cb:2","cb:4"]},{"name":"QuantumEpigeneticClock","mesh_term":"Quantum Dots AND Epigenomics AND Chronobiology Disorders","domain":"Quantum Physics-Epigenetics-Chronobiology","cluster_id":4,"bridge_potential":["ca:0","cb:4"]},{"name":"BioPhononicCryptography","mesh_term":"Biological Phenomena\/acoustics AND Cryptography AND Phonons","domain":"Biophysics-Cryptography-Condensed Matter Physics","cluster_id":1,"bridge_potential":["ca:0","cb:2"]},{"name":"AstroVirology","mesh_term":"Extraterrestrial Environment AND Viruses AND Space Flight","domain":"Astrobiology-Virology","cluster_id":5,"bridge_potential":["cb:3","cb:4"]},{"name":"MagnetoOncology","mesh_term":"Magnetics AND Neoplasms\/metabolism AND Ferroptosis","domain":"Physics-Oncology","cluster_id":2,"bridge_potential":["ca:0","cb:3"]},{"name":"NeuroCryptoEndocrinology","mesh_term":"Neurosecretory Systems AND Cryptography AND Endocrine Disruptors","domain":"Neuroscience-Cryptography-Endocrinology","cluster_id":3,"bridge_potential":["cb:2","cb:4"]},{"name":"PlasmaMarineEcology","mesh_term":"Plasma Gases\/analysis AND Marine Biology AND Ecosystem","domain":"Physics-Marine Biology-Ecology","cluster_id":4,"bridge_potential":["ca:0","cb:4"]},{"name":"QuantumBioCoral","mesh_term":"Quantum Biology AND Coral Reefs AND Photosynthesis","domain":"Quantum Physics-Marine Biology","cluster_id":1,"bridge_potential":["ca:0","cb:2"]},{"name":"CryptoNeuroImmunology","mesh_term":"Cryptography AND Neuroimmunomodulation AND Immune System","domain":"Cryptography-Neuroscience-Immunology","cluster_id":2,"bridge_potential":["ca:0","cb:3"]},{"name":"AstroOncology","mesh_term":"Space Flight AND Neoplasms\/radiation effects AND Cosmic Radiation","domain":"Astrobiology-Oncology","cluster_id":5,"bridge_potential":["cb:3","cb:4"]},{"name":"PhononGenomics","mesh_term":"Phonons AND Genomics AND Gene Expression Regulation","domain":"Condensed Matter Physics-Genomics","cluster_id":3,"bridge_potential":["cb:2","cb:4"]},{"name":"NeuroPlasmaMarine","mesh_term":"Neurogenesis AND Plasma Gases AND Marine Toxins\/pharmacology","domain":"Neuroscience-Physics-Marine Biology","cluster_id":4,"bridge_potential":["ca:0","cb:4"]},{"name":"CryptoAstroVirome","mesh_term":"Cryptography AND Extraterrestrial Environment AND Virome","domain":"Cryptography-Astrobiology-Virology","cluster_id":5,"bridge_potential":["cb:3","cb:4"]}],"analysis":"The generated concepts strategically bridge isolated clusters (0-2, 0-3, 0-4) by combining domains with minimal historical overlap. Physics (plasma\/quantum) is linked to oncology, marine biology, and neuroscience via therapeutic, ecological, and neurogenetic mechanisms. Cryptography is integrated with genomics, neuroimmunology, and astrobiology through data security, bioinformatics, and extraterrestrial data transmission. The entropy score reflects high interdisciplinary novelty while maintaining MeSH term validity.","entropy_score":0.92}
+[2026-04-22 15:41:28] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:41:28] Phase1: 8 concepts insérés. Entropy: 0.92
+[2026-04-22 15:41:38] === MISTRAL CALL START ===
+[2026-04-22 15:41:38] Context: general
+[2026-04-22 15:41:38] Model: codestral-2508, MaxTokens: 3000
+[2026-04-22 15:41:38] Prompt length: 1169 chars
+[2026-04-22 15:41:38] Prompt preview (first 1000 chars): Tu es ARCHIMEDES v5.0, extracteur de relations scientifiques.
+
+Analyse ces articles sur "Neural Quantum Entanglement" et extrait des triplets de relations biologiques/scientifiques avec données quantifiées.
+
+ARTICLES :
+- PMID:25012711 | Quantum effects in the understanding of consciousness.
+- PMID:15325008 | Spin-mediated consciousness theory: possible roles of neural membrane nuclear spin ensembles and paramagnetic oxygen.
+- PMID:10600243 | Dendritic encoding: an alternative to temporal synaptic coding of conscious experience.
+
+RÈGLES :
+- Extrait des valeurs numériques (IC50, Km, constantes de liaison) quand disponibles
+- Gère les contradictions avec un Score de Controverse [0-1]
+- Chaque relation a un score de confiance [0-1]
+- Termes en anglais MeSH exclusivement
+- Réponse JSON UNIQUEMENT
+
+FORMAT :
+{
+  "triplets": [
+    {
+      "source": "concept_source",
+      "target": "concept_target",
+      "relation": "activates|inhibits|binds|regulates|correlates",
+      "confidence": 0.
+[2026-04-22 15:41:38] Prompt continued... (total 1169 chars)
+[2026-04-22 15:41:38] Attempt 1/3 with key 5qa***ake
+[2026-04-22 15:41:38] Payload JSON length: 1365 bytes
+[2026-04-22 15:41:38] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:41:40] Raw response received (1680 bytes)
+[2026-04-22 15:41:40] Response preview (first 1000 chars): {"id":"0d068e658323410786242eeb98206f16","created":1776872498,"model":"codestral-2508","usage":{"prompt_tokens":330,"total_tokens":717,"completion_tokens":387,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"triplets\": [\n    {\n      \"source\": \"Quantum Entanglement\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.75,\n      \"controversy\": 0.3,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"25012711\"\n    },\n    {\n      \"source\": \"Neural Membrane Nuclear Spin Ensembles\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"regulates\",\n      \"confidence\": 0.8,\n      \"controversy\": 0.2,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Paramagnetic Oxygen\",\n      \"target\": \"Neural Membra
+[2026-04-22 15:41:40] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:41:40] Response length: 1680 bytes
+[2026-04-22 15:41:40] Response first 2000 chars: {"id":"0d068e658323410786242eeb98206f16","created":1776872498,"model":"codestral-2508","usage":{"prompt_tokens":330,"total_tokens":717,"completion_tokens":387,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"triplets\": [\n    {\n      \"source\": \"Quantum Entanglement\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.75,\n      \"controversy\": 0.3,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"25012711\"\n    },\n    {\n      \"source\": \"Neural Membrane Nuclear Spin Ensembles\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"regulates\",\n      \"confidence\": 0.8,\n      \"controversy\": 0.2,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Paramagnetic Oxygen\",\n      \"target\": \"Neural Membrane Nuclear Spin Ensembles\",\n      \"relation\": \"binds\",\n      \"confidence\": 0.7,\n      \"controversy\": 0.4,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Dendritic Encoding\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.65,\n      \"controversy\": 0.35,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"10600243\"\n    }\n  ],\n  \"dark_data\": \"No specific numerical data found in the articles, but the concept of quantum effects in consciousness remains highly debated with no clear consensus on measurable parameters.\"\n}\n```"}}]}
+[2026-04-22 15:41:40] SUCCESS: Content received (1192 chars)
+[2026-04-22 15:41:40] Response content preview (first 1000 chars): ```json
+{
+  "triplets": [
+    {
+      "source": "Quantum Entanglement",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural Membrane Nuclear Spin Ensembles",
+      "target": "Consciousness",
+      "relation": "regulates",
+      "confidence": 0.8,
+      "controversy": 0.2,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic Oxygen",
+      "target": "Neural Membrane Nuclear Spin Ensembles",
+      "relation": "binds",
+      "confidence": 0.7,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic Encoding",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.35,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "da
+[2026-04-22 15:41:40] Full response structure: {"id":"0d068e658323410786242eeb98206f16","created":1776872498,"model":"codestral-2508","usage":{"prompt_tokens":330,"total_tokens":717,"completion_tokens":387,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"triplets\": [\n    {\n      \"source\": \"Quantum Entanglement\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.75,\n      \"controversy\": 0.3,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"25012711\"\n    },\n    {\n      \"source\": \"Neural Membrane Nuclear Spin Ensembles\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"regulates\",\n      \"confidence\": 0.8,\n      \"controversy\": 0.2,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Paramagnetic Oxygen\",\n      \"target\": \"Neural Membrane Nuclear Spin Ensembles\",\n      \"relation\": \"binds\",\n      \"confidence\": 0.7,\n      \"controversy\": 0.4,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Dendritic Encoding\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.65,\n      \"controversy\": 0.35,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"10600243\"\n    }\n  ],\n  \"dark_data\": \"No specific numerical data found in the articles, but the concept of quantum effects in consciousness remains highly debated with no clear consensus on measurable parameters.\"\n}\n```"}}]}
+[2026-04-22 15:41:40] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:41:41] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:41:41] parseJsonFromMistral: Raw input length=1192
+[2026-04-22 15:41:41] parseJsonFromMistral: Raw preview (first 1000 chars): ```json
+{
+  "triplets": [
+    {
+      "source": "Quantum Entanglement",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural Membrane Nuclear Spin Ensembles",
+      "target": "Consciousness",
+      "relation": "regulates",
+      "confidence": 0.8,
+      "controversy": 0.2,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic Oxygen",
+      "target": "Neural Membrane Nuclear Spin Ensembles",
+      "relation": "binds",
+      "confidence": 0.7,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic Encoding",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.35,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "da
+[2026-04-22 15:41:41] parseJsonFromMistral: Raw full content: ```json
+{
+  "triplets": [
+    {
+      "source": "Quantum Entanglement",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural Membrane Nuclear Spin Ensembles",
+      "target": "Consciousness",
+      "relation": "regulates",
+      "confidence": 0.8,
+      "controversy": 0.2,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic Oxygen",
+      "target": "Neural Membrane Nuclear Spin Ensembles",
+      "relation": "binds",
+      "confidence": 0.7,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic Encoding",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.35,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "dark_data": "No specific numerical data found in the articles, but the concept of quantum effects in consciousness remains highly debated with no clear consensus on measurable parameters."
+}
+```
+[2026-04-22 15:41:41] parseJsonFromMistral: Extracted JSON block from 8 to 1187
+[2026-04-22 15:41:41] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "triplets": [
+    {
+      "source": "Quantum Entanglement",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural Membrane Nuclear Spin Ensembles",
+      "target": "Consciousness",
+      "relation": "regulates",
+      "confidence": 0.8,
+      "controversy": 0.2,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic Oxygen",
+      "target": "Neural Membrane Nuclear Spin Ensembles",
+      "relation": "binds",
+      "confidence": 0.7,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic Encoding",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.35,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "dark_data"
+[2026-04-22 15:41:41] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "triplets": [
+    {
+      "source": "Quantum Entanglement",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural Membrane Nuclear Spin Ensembles",
+      "target": "Consciousness",
+      "relation": "regulates",
+      "confidence": 0.8,
+      "controversy": 0.2,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic Oxygen",
+      "target": "Neural Membrane Nuclear Spin Ensembles",
+      "relation": "binds",
+      "confidence": 0.7,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic Encoding",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.35,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "dark_data"
+[2026-04-22 15:41:41] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:41:41] parseJsonFromMistral: Decoded data structure: {"triplets":[{"source":"Quantum Entanglement","target":"Consciousness","relation":"correlates","confidence":0.75,"controversy":0.3,"ic50":null,"km":null,"pmid":"25012711"},{"source":"Neural Membrane Nuclear Spin Ensembles","target":"Consciousness","relation":"regulates","confidence":0.8,"controversy":0.2,"ic50":null,"km":null,"pmid":"15325008"},{"source":"Paramagnetic Oxygen","target":"Neural Membrane Nuclear Spin Ensembles","relation":"binds","confidence":0.7,"controversy":0.4,"ic50":null,"km":null,"pmid":"15325008"},{"source":"Dendritic Encoding","target":"Consciousness","relation":"correlates","confidence":0.65,"controversy":0.35,"ic50":null,"km":null,"pmid":"10600243"}],"dark_data":"No specific numerical data found in the articles, but the concept of quantum effects in consciousness remains highly debated with no clear consensus on measurable parameters."}
+[2026-04-22 15:41:41] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:41:42] === MISTRAL CALL START ===
+[2026-04-22 15:41:42] Context: general
+[2026-04-22 15:41:42] Model: codestral-2508, MaxTokens: 3000
+[2026-04-22 15:41:42] Prompt length: 1165 chars
+[2026-04-22 15:41:42] Prompt preview (first 1000 chars): Tu es ARCHIMEDES v5.0, extracteur de relations scientifiques.
+
+Analyse ces articles sur "Gravitational Glycomics" et extrait des triplets de relations biologiques/scientifiques avec données quantifiées.
+
+ARTICLES :
+- PMID:25012711 | Quantum effects in the understanding of consciousness.
+- PMID:15325008 | Spin-mediated consciousness theory: possible roles of neural membrane nuclear spin ensembles and paramagnetic oxygen.
+- PMID:10600243 | Dendritic encoding: an alternative to temporal synaptic coding of conscious experience.
+
+RÈGLES :
+- Extrait des valeurs numériques (IC50, Km, constantes de liaison) quand disponibles
+- Gère les contradictions avec un Score de Controverse [0-1]
+- Chaque relation a un score de confiance [0-1]
+- Termes en anglais MeSH exclusivement
+- Réponse JSON UNIQUEMENT
+
+FORMAT :
+{
+  "triplets": [
+    {
+      "source": "concept_source",
+      "target": "concept_target",
+      "relation": "activates|inhibits|binds|regulates|correlates",
+      "confidence": 0.85,
+
+[2026-04-22 15:41:42] Prompt continued... (total 1165 chars)
+[2026-04-22 15:41:42] Attempt 1/3 with key o3r***ytu
+[2026-04-22 15:41:42] Payload JSON length: 1361 bytes
+[2026-04-22 15:41:42] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:41:45] Raw response received (1664 bytes)
+[2026-04-22 15:41:45] Response preview (first 1000 chars): {"id":"9d840c61ec0b44e29680efbbc6137e31","created":1776872503,"model":"codestral-2508","usage":{"prompt_tokens":331,"total_tokens":709,"completion_tokens":378,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"triplets\": [\n    {\n      \"source\": \"Quantum effects\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.75,\n      \"controversy\": 0.3,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"25012711\"\n    },\n    {\n      \"source\": \"Neural membrane nuclear spin ensembles\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.65,\n      \"controversy\": 0.4,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Paramagnetic oxygen\",\n      \"target\": \"Neural membrane 
+[2026-04-22 15:41:45] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:41:45] Response length: 1664 bytes
+[2026-04-22 15:41:45] Response first 2000 chars: {"id":"9d840c61ec0b44e29680efbbc6137e31","created":1776872503,"model":"codestral-2508","usage":{"prompt_tokens":331,"total_tokens":709,"completion_tokens":378,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"triplets\": [\n    {\n      \"source\": \"Quantum effects\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.75,\n      \"controversy\": 0.3,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"25012711\"\n    },\n    {\n      \"source\": \"Neural membrane nuclear spin ensembles\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.65,\n      \"controversy\": 0.4,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Paramagnetic oxygen\",\n      \"target\": \"Neural membrane nuclear spin ensembles\",\n      \"relation\": \"regulates\",\n      \"confidence\": 0.7,\n      \"controversy\": 0.25,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Dendritic encoding\",\n      \"target\": \"Conscious experience\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.8,\n      \"controversy\": 0.15,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"10600243\"\n    }\n  ],\n  \"dark_data\": \"No explicit numerical data found in the articles. The relationships are primarily theoretical and lack empirical validation with quantifiable metrics.\"\n}\n```"}}]}
+[2026-04-22 15:41:45] SUCCESS: Content received (1176 chars)
+[2026-04-22 15:41:45] Response content preview (first 1000 chars): ```json
+{
+  "triplets": [
+    {
+      "source": "Quantum effects",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural membrane nuclear spin ensembles",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic oxygen",
+      "target": "Neural membrane nuclear spin ensembles",
+      "relation": "regulates",
+      "confidence": 0.7,
+      "controversy": 0.25,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic encoding",
+      "target": "Conscious experience",
+      "relation": "correlates",
+      "confidence": 0.8,
+      "controversy": 0.15,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  
+[2026-04-22 15:41:45] Full response structure: {"id":"9d840c61ec0b44e29680efbbc6137e31","created":1776872503,"model":"codestral-2508","usage":{"prompt_tokens":331,"total_tokens":709,"completion_tokens":378,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"triplets\": [\n    {\n      \"source\": \"Quantum effects\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.75,\n      \"controversy\": 0.3,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"25012711\"\n    },\n    {\n      \"source\": \"Neural membrane nuclear spin ensembles\",\n      \"target\": \"Consciousness\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.65,\n      \"controversy\": 0.4,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Paramagnetic oxygen\",\n      \"target\": \"Neural membrane nuclear spin ensembles\",\n      \"relation\": \"regulates\",\n      \"confidence\": 0.7,\n      \"controversy\": 0.25,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"15325008\"\n    },\n    {\n      \"source\": \"Dendritic encoding\",\n      \"target\": \"Conscious experience\",\n      \"relation\": \"correlates\",\n      \"confidence\": 0.8,\n      \"controversy\": 0.15,\n      \"ic50\": null,\n      \"km\": null,\n      \"pmid\": \"10600243\"\n    }\n  ],\n  \"dark_data\": \"No explicit numerical data found in the articles. The relationships are primarily theoretical and lack empirical validation with quantifiable metrics.\"\n}\n```"}}]}
+[2026-04-22 15:41:45] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:41:46] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:41:46] parseJsonFromMistral: Raw input length=1176
+[2026-04-22 15:41:46] parseJsonFromMistral: Raw preview (first 1000 chars): ```json
+{
+  "triplets": [
+    {
+      "source": "Quantum effects",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural membrane nuclear spin ensembles",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic oxygen",
+      "target": "Neural membrane nuclear spin ensembles",
+      "relation": "regulates",
+      "confidence": 0.7,
+      "controversy": 0.25,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic encoding",
+      "target": "Conscious experience",
+      "relation": "correlates",
+      "confidence": 0.8,
+      "controversy": 0.15,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  
+[2026-04-22 15:41:46] parseJsonFromMistral: Raw full content: ```json
+{
+  "triplets": [
+    {
+      "source": "Quantum effects",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural membrane nuclear spin ensembles",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic oxygen",
+      "target": "Neural membrane nuclear spin ensembles",
+      "relation": "regulates",
+      "confidence": 0.7,
+      "controversy": 0.25,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic encoding",
+      "target": "Conscious experience",
+      "relation": "correlates",
+      "confidence": 0.8,
+      "controversy": 0.15,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "dark_data": "No explicit numerical data found in the articles. The relationships are primarily theoretical and lack empirical validation with quantifiable metrics."
+}
+```
+[2026-04-22 15:41:46] parseJsonFromMistral: Extracted JSON block from 8 to 1171
+[2026-04-22 15:41:46] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "triplets": [
+    {
+      "source": "Quantum effects",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural membrane nuclear spin ensembles",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic oxygen",
+      "target": "Neural membrane nuclear spin ensembles",
+      "relation": "regulates",
+      "confidence": 0.7,
+      "controversy": 0.25,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic encoding",
+      "target": "Conscious experience",
+      "relation": "correlates",
+      "confidence": 0.8,
+      "controversy": 0.15,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "da
+[2026-04-22 15:41:46] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "triplets": [
+    {
+      "source": "Quantum effects",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.75,
+      "controversy": 0.3,
+      "ic50": null,
+      "km": null,
+      "pmid": "25012711"
+    },
+    {
+      "source": "Neural membrane nuclear spin ensembles",
+      "target": "Consciousness",
+      "relation": "correlates",
+      "confidence": 0.65,
+      "controversy": 0.4,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Paramagnetic oxygen",
+      "target": "Neural membrane nuclear spin ensembles",
+      "relation": "regulates",
+      "confidence": 0.7,
+      "controversy": 0.25,
+      "ic50": null,
+      "km": null,
+      "pmid": "15325008"
+    },
+    {
+      "source": "Dendritic encoding",
+      "target": "Conscious experience",
+      "relation": "correlates",
+      "confidence": 0.8,
+      "controversy": 0.15,
+      "ic50": null,
+      "km": null,
+      "pmid": "10600243"
+    }
+  ],
+  "da
+[2026-04-22 15:41:46] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:41:46] parseJsonFromMistral: Decoded data structure: {"triplets":[{"source":"Quantum effects","target":"Consciousness","relation":"correlates","confidence":0.75,"controversy":0.3,"ic50":null,"km":null,"pmid":"25012711"},{"source":"Neural membrane nuclear spin ensembles","target":"Consciousness","relation":"correlates","confidence":0.65,"controversy":0.4,"ic50":null,"km":null,"pmid":"15325008"},{"source":"Paramagnetic oxygen","target":"Neural membrane nuclear spin ensembles","relation":"regulates","confidence":0.7,"controversy":0.25,"ic50":null,"km":null,"pmid":"15325008"},{"source":"Dendritic encoding","target":"Conscious experience","relation":"correlates","confidence":0.8,"controversy":0.15,"ic50":null,"km":null,"pmid":"10600243"}],"dark_data":"No explicit numerical data found in the articles. The relationships are primarily theoretical and lack empirical validation with quantifiable metrics."}
+[2026-04-22 15:41:46] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:41:47] Phase2: 3 articles récoltés, 833 edges total
+[2026-04-22 15:41:50] Phase3: Edge count = 833
+[2026-04-22 15:41:50] Phase3: Paths 4-degrees found = 10
+[2026-04-22 15:41:50] Phase3: Paths 3-degrees found = 15
+[2026-04-22 15:41:50] Phase3: Total paths for hypothesis generation = 25
+[2026-04-22 15:41:50] === MISTRAL CALL START ===
+[2026-04-22 15:41:50] Context: general
+[2026-04-22 15:41:50] Model: mistral-large-2512, MaxTokens: 4096
+[2026-04-22 15:41:50] Prompt length: 8656 chars
+[2026-04-22 15:41:50] Prompt preview (first 1000 chars): Tu es ARCHIMEDES v5.0, moteur de raisonnement logique.
+
+PHASE 3 — INFÉRENCE DE TRANSITIVITÉ :
+
+Chemins détectés dans le graphe de connaissances :
+[
+    {
+        "A": "Hypoxia-inducible factor-1 (HIF-1)",
+        "rel_AB": "activates",
+        "B": "Vascular endothelial growth factor (VEGF)",
+        "rel_BC": "binds",
+        "C": "Vascular endothelial growth factor receptor (VEGFR)",
+        "path_strength": 0.855,
+        "source_concept_id": 2443,
+        "target_concept_id": 2448
+    },
+    {
+        "A": "Cold Atmospheric Plasma",
+        "rel_AB": "inhibits",
+        "B": "Inflammation",
+        "rel_BC": "activates",
+        "C": "Corneal Pathological Regeneration",
+        "path_strength": 0.81,
+        "source_concept_id": 17,
+        "target_concept_id": 237
+    },
+    {
+        "A": "Cold Atmospheric Plasma",
+        "rel_AB": "inhibits",
+        "B": "Inflammation",
+        "rel_BC": "activates",
+        "C": "Corneal Pathological Regeneration",
+        "path_strengt
+[2026-04-22 15:41:50] Prompt continued... (total 8656 chars)
+[2026-04-22 15:41:50] Attempt 1/3 with key 5qa***ake
+[2026-04-22 15:41:50] Payload JSON length: 9920 bytes
+[2026-04-22 15:41:50] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:42:07] Raw response received (4568 bytes)
+[2026-04-22 15:42:07] Response preview (first 1000 chars): {"id":"5311a17c3df547d398a0e50bbf3af935","created":1776872510,"model":"mistral-large-2512","usage":{"prompt_tokens":2836,"total_tokens":3887,"completion_tokens":1051,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"{\n  \"hypotheses\": [\n    {\n      \"concept_a\": \"Cold Atmospheric Plasma\",\n      \"concept_c\": \"Corneal Pathological Regeneration\",\n      \"path\": \"Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration\",\n      \"transitive_logic\": \"Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).\",\n      \"probability\": 0.81,\n      \"confidence\": 0.90,\n      \"novelty_hint\": \"Lien direct entre Cold Atmospheric Plasma et la régénération pathologique d
+[2026-04-22 15:42:07] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:42:07] Response length: 4568 bytes
+[2026-04-22 15:42:07] Response first 2000 chars: {"id":"5311a17c3df547d398a0e50bbf3af935","created":1776872510,"model":"mistral-large-2512","usage":{"prompt_tokens":2836,"total_tokens":3887,"completion_tokens":1051,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"{\n  \"hypotheses\": [\n    {\n      \"concept_a\": \"Cold Atmospheric Plasma\",\n      \"concept_c\": \"Corneal Pathological Regeneration\",\n      \"path\": \"Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration\",\n      \"transitive_logic\": \"Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).\",\n      \"probability\": 0.81,\n      \"confidence\": 0.90,\n      \"novelty_hint\": \"Lien direct entre Cold Atmospheric Plasma et la régénération pathologique de la cornée est peu documenté, suggérant un mécanisme thérapeutique potentiellement innovant.\",\n      \"vmax_estimate\": 1.2,\n      \"km_estimate\": 0.005\n    },\n    {\n      \"concept_a\": \"Privacy-preserving Storage\",\n      \"concept_c\": \"Patient Privacy\",\n      \"path\": \"Privacy-preserving Storage→Genomic Data→Patient Privacy\",\n      \"transitive_logic\": \"Si Privacy-preserving Storage protège les Genomic Data (A+ B) et que les Genomic Data corrèlent avec la Patient Privacy (B~ C), alors Privacy-preserving Storage devrait indirectement protéger la Patient Privacy (A+ C).\",\n      \"probability\": 0.81,\n      \"confidence\": 0.85,\n      \"novelty_hint\": \"Approche systémique peu explorée liant stockage sécurisé des données génomiques et protection globale de la vie privée des patients.\",\n      \"vmax_estimate\": 1.0,\n      \"km_estimate\": 0.01\n    },\n    {\n      \"concept_a\": \"sensory neurons\",\n      \"concept_c\": \"tumor immune inf
+[2026-04-22 15:42:07] SUCCESS: Content received (4027 chars)
+[2026-04-22 15:42:07] Response content preview (first 1000 chars): {
+  "hypotheses": [
+    {
+      "concept_a": "Cold Atmospheric Plasma",
+      "concept_c": "Corneal Pathological Regeneration",
+      "path": "Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration",
+      "transitive_logic": "Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).",
+      "probability": 0.81,
+      "confidence": 0.90,
+      "novelty_hint": "Lien direct entre Cold Atmospheric Plasma et la régénération pathologique de la cornée est peu documenté, suggérant un mécanisme thérapeutique potentiellement innovant.",
+      "vmax_estimate": 1.2,
+      "km_estimate": 0.005
+    },
+    {
+      "concept_a": "Privacy-preserving Storage",
+      "concept_c": "Patient Privacy",
+      "path": "Privacy-preserving Storage→Genomic Data→Patient Privacy",
+      "transitive_logic": "Si Privacy-prese
+[2026-04-22 15:42:07] Full response structure: {"id":"5311a17c3df547d398a0e50bbf3af935","created":1776872510,"model":"mistral-large-2512","usage":{"prompt_tokens":2836,"total_tokens":3887,"completion_tokens":1051,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"{\n  \"hypotheses\": [\n    {\n      \"concept_a\": \"Cold Atmospheric Plasma\",\n      \"concept_c\": \"Corneal Pathological Regeneration\",\n      \"path\": \"Cold Atmospheric Plasma\u2192Inflammation\u2192Corneal Pathological Regeneration\",\n      \"transitive_logic\": \"Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).\",\n      \"probability\": 0.81,\n      \"confidence\": 0.90,\n      \"novelty_hint\": \"Lien direct entre Cold Atmospheric Plasma et la r\u00e9g\u00e9n\u00e9ration pathologique de la corn\u00e9e est peu document\u00e9, sugg\u00e9rant un m\u00e9canisme th\u00e9rapeutique potentiellement innovant.\",\n      \"vmax_estimate\": 1.2,\n      \"km_estimate\": 0.005\n    },\n    {\n      \"concept_a\": \"Privacy-preserving Storage\",\n      \"concept_c\": \"Patient Privacy\",\n      \"path\": \"Privacy-preserving Storage\u2192Genomic Data\u2192Patient Privacy\",\n      \"transitive_logic\": \"Si Privacy-preserving Storage prot\u00e8ge les Genomic Data (A+ B) et que les Genomic Data corr\u00e8lent avec la Patient Privacy (B~ C), alors Privacy-preserving Storage devrait indirectement prot\u00e9ger la Patient Privacy (A+ C).\",\n      \"probability\": 0.81,\n      \"confidence\": 0.85,\n      \"novelty_hint\": \"Approche syst\u00e9mique peu explor\u00e9e liant stockage s\u00e9curis\u00e9 des donn\u00e9es g\u00e9nomiques et protection globale de la vie priv\u00e9e des patients.\",\n      \"vmax_estimate\": 1.0,\n      \"km_estimate\": 0.01\n    },\n    {\n      \"concept_a\": \"sensory neurons\",\n      \"concept_c\": \"tumor immune infiltration\",\n      \"path\": \"sensory neurons\u2192macrophages\u2192tumor immune infiltration\",\n      \"transitive_logic\": \"Si les sensory neurons r\u00e9gulent les macrophages (A+ B) et que les macrophages inhibent la tumor immune infiltration (B- C), alors les sensory neurons pourraient indirectement favoriser la tumor immune infiltration (A+ C via inhibition de l'inhibition).\",\n      \"probability\": 0.75,\n      \"confidence\": 0.80,\n      \"novelty_hint\": \"M\u00e9canisme inattendu o\u00f9 les neurones sensoriels modulent l'infiltration immunitaire tumorale via les macrophages, ouvrant des pistes en immuno-oncologie.\",\n      \"vmax_estimate\": 1.8,\n      \"km_estimate\": 0.003\n    },\n    {\n      \"concept_a\": \"Neurotransmitter\",\n      \"concept_c\": \"Gastrulation\",\n      \"path\": \"Neurotransmitter\u2192Nematostella vectensis\u2192Gastrulation\",\n      \"transitive_logic\": \"Si les Neurotransmitter se lient \u00e0 Nematostella vectensis (A+ B) et que Nematostella vectensis r\u00e9gule la Gastrulation (B+ C), alors les Neurotransmitter pourraient influencer la Gastrulation (A+ C).\",\n      \"probability\": 0.81,\n      \"confidence\": 0.75,\n      \"novelty_hint\": \"R\u00f4le des neurotransmetteurs dans la r\u00e9gulation d\u00e9veloppementale chez les cnidaires, peu \u00e9tudi\u00e9 en biologie du d\u00e9veloppement.\",\n      \"vmax_estimate\": 1.3,\n      \"km_estimate\": 0.004\n    }\n  ],\n  \"isolated_clusters\": [\n    {\n      \"cluster\": \"Neurotransmitter genes \u2192 Nematostella vectensis endoderm \u2192 fast neurotransmission-related genes \u2192 non-nervous endoderm\",\n      \"reason\": \"Aucun lien direct ou indirect avec des pathologies humaines ou des m\u00e9canismes th\u00e9rapeutiques identifi\u00e9s.\"\n    },\n    {\n      \"cluster\": \"ATF3 \u2192 CH25H \u2192 effector trogocytosis\",\n      \"reason\": \"M\u00e9canisme cellulaire isol\u00e9 sans connexion claire \u00e0 des maladies ou applications cliniques.\"\n    }\n  ],\n  \"reasoning_summary\": \"La transitivit\u00e9 appliqu\u00e9e r\u00e9v\u00e8le des hypoth\u00e8ses prometteuses liant des m\u00e9canismes inhibiteurs (ex: Cold Atmospheric Plasma) \u00e0 des cibles pathologiques (Corneal Pathological Regeneration), ainsi que des interactions inattendues (neurones sensoriels et infiltration tumorale). Les clusters isol\u00e9s concernent principalement des processus d\u00e9veloppementaux ou cellulaires sans impact clinique imm\u00e9diat. Les chemins multi-degr\u00e9s (ex: Oxidative Stress \u2192 Multiple Myeloma \u2192 Neurodegeneration) montrent des boucles de r\u00e9troaction, mais leur probabilit\u00e9 est r\u00e9duite par la complexit\u00e9 des interactions.\"\n}"}}]}
+[2026-04-22 15:42:07] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:42:08] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:42:08] parseJsonFromMistral: Raw input length=4027
+[2026-04-22 15:42:08] parseJsonFromMistral: Raw preview (first 1000 chars): {
+  "hypotheses": [
+    {
+      "concept_a": "Cold Atmospheric Plasma",
+      "concept_c": "Corneal Pathological Regeneration",
+      "path": "Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration",
+      "transitive_logic": "Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).",
+      "probability": 0.81,
+      "confidence": 0.90,
+      "novelty_hint": "Lien direct entre Cold Atmospheric Plasma et la régénération pathologique de la cornée est peu documenté, suggérant un mécanisme thérapeutique potentiellement innovant.",
+      "vmax_estimate": 1.2,
+      "km_estimate": 0.005
+    },
+    {
+      "concept_a": "Privacy-preserving Storage",
+      "concept_c": "Patient Privacy",
+      "path": "Privacy-preserving Storage→Genomic Data→Patient Privacy",
+      "transitive_logic": "Si Privacy-prese
+[2026-04-22 15:42:08] parseJsonFromMistral: Raw full content: {
+  "hypotheses": [
+    {
+      "concept_a": "Cold Atmospheric Plasma",
+      "concept_c": "Corneal Pathological Regeneration",
+      "path": "Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration",
+      "transitive_logic": "Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).",
+      "probability": 0.81,
+      "confidence": 0.90,
+      "novelty_hint": "Lien direct entre Cold Atmospheric Plasma et la régénération pathologique de la cornée est peu documenté, suggérant un mécanisme thérapeutique potentiellement innovant.",
+      "vmax_estimate": 1.2,
+      "km_estimate": 0.005
+    },
+    {
+      "concept_a": "Privacy-preserving Storage",
+      "concept_c": "Patient Privacy",
+      "path": "Privacy-preserving Storage→Genomic Data→Patient Privacy",
+      "transitive_logic": "Si Privacy-preserving Storage protège les Genomic Data (A+ B) et que les Genomic Data corrèlent avec la Patient Privacy (B~ C), alors Privacy-preserving Storage devrait indirectement protéger la Patient Privacy (A+ C).",
+      "probability": 0.81,
+      "confidence": 0.85,
+      "novelty_hint": "Approche systémique peu explorée liant stockage sécurisé des données génomiques et protection globale de la vie privée des patients.",
+      "vmax_estimate": 1.0,
+      "km_estimate": 0.01
+    },
+    {
+      "concept_a": "sensory neurons",
+      "concept_c": "tumor immune infiltration",
+      "path": "sensory neurons→macrophages→tumor immune infiltration",
+      "transitive_logic": "Si les sensory neurons régulent les macrophages (A+ B) et que les macrophages inhibent la tumor immune infiltration (B- C), alors les sensory neurons pourraient indirectement favoriser la tumor immune infiltration (A+ C via inhibition de l'inhibition).",
+      "probability": 0.75,
+      "confidence": 0.80,
+      "novelty_hint": "Mécanisme inattendu où les neurones sensoriels modulent l'infiltration immunitaire tumorale via les macrophages, ouvrant des pistes en immuno-oncologie.",
+      "vmax_estimate": 1.8,
+      "km_estimate": 0.003
+    },
+    {
+      "concept_a": "Neurotransmitter",
+      "concept_c": "Gastrulation",
+      "path": "Neurotransmitter→Nematostella vectensis→Gastrulation",
+      "transitive_logic": "Si les Neurotransmitter se lient à Nematostella vectensis (A+ B) et que Nematostella vectensis régule la Gastrulation (B+ C), alors les Neurotransmitter pourraient influencer la Gastrulation (A+ C).",
+      "probability": 0.81,
+      "confidence": 0.75,
+      "novelty_hint": "Rôle des neurotransmetteurs dans la régulation développementale chez les cnidaires, peu étudié en biologie du développement.",
+      "vmax_estimate": 1.3,
+      "km_estimate": 0.004
+    }
+  ],
+  "isolated_clusters": [
+    {
+      "cluster": "Neurotransmitter genes → Nematostella vectensis endoderm → fast neurotransmission-related genes → non-nervous endoderm",
+      "reason": "Aucun lien direct ou indirect avec des pathologies humaines ou des mécanismes thérapeutiques identifiés."
+    },
+    {
+      "cluster": "ATF3 → CH25H → effector trogocytosis",
+      "reason": "Mécanisme cellulaire isolé sans connexion claire à des maladies ou applications cliniques."
+    }
+  ],
+  "reasoning_summary": "La transitivité appliquée révèle des hypothèses prometteuses liant des mécanismes inhibiteurs (ex: Cold Atmospheric Plasma) à des cibles pathologiques (Corneal Pathological Regeneration), ainsi que des interactions inattendues (neurones sensoriels et infiltration tumorale). Les clusters isolés concernent principalement des processus développementaux ou cellulaires sans impact clinique immédiat. Les chemins multi-degrés (ex: Oxidative Stress → Multiple Myeloma → Neurodegeneration) montrent des boucles de rétroaction, mais leur probabilité est réduite par la complexité des interactions."
+}
+[2026-04-22 15:42:08] parseJsonFromMistral: Extracted JSON block from 0 to 4026
+[2026-04-22 15:42:08] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "hypotheses": [
+    {
+      "concept_a": "Cold Atmospheric Plasma",
+      "concept_c": "Corneal Pathological Regeneration",
+      "path": "Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration",
+      "transitive_logic": "Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).",
+      "probability": 0.81,
+      "confidence": 0.90,
+      "novelty_hint": "Lien direct entre Cold Atmospheric Plasma et la régénération pathologique de la cornée est peu documenté, suggérant un mécanisme thérapeutique potentiellement innovant.",
+      "vmax_estimate": 1.2,
+      "km_estimate": 0.005
+    },
+    {
+      "concept_a": "Privacy-preserving Storage",
+      "concept_c": "Patient Privacy",
+      "path": "Privacy-preserving Storage→Genomic Data→Patient Privacy",
+      "transitive_logic": "Si Privacy-prese
+[2026-04-22 15:42:08] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "hypotheses": [
+    {
+      "concept_a": "Cold Atmospheric Plasma",
+      "concept_c": "Corneal Pathological Regeneration",
+      "path": "Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration",
+      "transitive_logic": "Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).",
+      "probability": 0.81,
+      "confidence": 0.90,
+      "novelty_hint": "Lien direct entre Cold Atmospheric Plasma et la régénération pathologique de la cornée est peu documenté, suggérant un mécanisme thérapeutique potentiellement innovant.",
+      "vmax_estimate": 1.2,
+      "km_estimate": 0.005
+    },
+    {
+      "concept_a": "Privacy-preserving Storage",
+      "concept_c": "Patient Privacy",
+      "path": "Privacy-preserving Storage→Genomic Data→Patient Privacy",
+      "transitive_logic": "Si Privacy-prese
+[2026-04-22 15:42:08] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:42:08] parseJsonFromMistral: Decoded data structure: {"hypotheses":[{"concept_a":"Cold Atmospheric Plasma","concept_c":"Corneal Pathological Regeneration","path":"Cold Atmospheric Plasma\u2192Inflammation\u2192Corneal Pathological Regeneration","transitive_logic":"Si Cold Atmospheric Plasma inhibe l'Inflammation (A- B) et que l'Inflammation active la Corneal Pathological Regeneration (B+ C), alors Cold Atmospheric Plasma devrait inhiber la Corneal Pathological Regeneration (A- C).","probability":0.81,"confidence":0.9,"novelty_hint":"Lien direct entre Cold Atmospheric Plasma et la r\u00e9g\u00e9n\u00e9ration pathologique de la corn\u00e9e est peu document\u00e9, sugg\u00e9rant un m\u00e9canisme th\u00e9rapeutique potentiellement innovant.","vmax_estimate":1.2,"km_estimate":0.005},{"concept_a":"Privacy-preserving Storage","concept_c":"Patient Privacy","path":"Privacy-preserving Storage\u2192Genomic Data\u2192Patient Privacy","transitive_logic":"Si Privacy-preserving Storage prot\u00e8ge les Genomic Data (A+ B) et que les Genomic Data corr\u00e8lent avec la Patient Privacy (B~ C), alors Privacy-preserving Storage devrait indirectement prot\u00e9ger la Patient Privacy (A+ C).","probability":0.81,"confidence":0.85,"novelty_hint":"Approche syst\u00e9mique peu explor\u00e9e liant stockage s\u00e9curis\u00e9 des donn\u00e9es g\u00e9nomiques et protection globale de la vie priv\u00e9e des patients.","vmax_estimate":1,"km_estimate":0.01},{"concept_a":"sensory neurons","concept_c":"tumor immune infiltration","path":"sensory neurons\u2192macrophages\u2192tumor immune infiltration","transitive_logic":"Si les sensory neurons r\u00e9gulent les macrophages (A+ B) et que les macrophages inhibent la tumor immune infiltration (B- C), alors les sensory neurons pourraient indirectement favoriser la tumor immune infiltration (A+ C via inhibition de l'inhibition).","probability":0.75,"confidence":0.8,"novelty_hint":"M\u00e9canisme inattendu o\u00f9 les neurones sensoriels modulent l'infiltration immunitaire tumorale via les macrophages, ouvrant des pistes en immuno-oncologie.","vmax_estimate":1.8,"km_estimate":0.003},{"concept_a":"Neurotransmitter","concept_c":"Gastrulation","path":"Neurotransmitter\u2192Nematostella vectensis\u2192Gastrulation","transitive_logic":"Si les Neurotransmitter se lient \u00e0 Nematostella vectensis (A+ B) et que Nematostella vectensis r\u00e9gule la Gastrulation (B+ C), alors les Neurotransmitter pourraient influencer la Gastrulation (A+ C).","probability":0.81,"confidence":0.75,"novelty_hint":"R\u00f4le des neurotransmetteurs dans la r\u00e9gulation d\u00e9veloppementale chez les cnidaires, peu \u00e9tudi\u00e9 en biologie du d\u00e9veloppement.","vmax_estimate":1.3,"km_estimate":0.004}],"isolated_clusters":[{"cluster":"Neurotransmitter genes \u2192 Nematostella vectensis endoderm \u2192 fast neurotransmission-related genes \u2192 non-nervous endoderm","reason":"Aucun lien direct ou indirect avec des pathologies humaines ou des m\u00e9canismes th\u00e9rapeutiques identifi\u00e9s."},{"cluster":"ATF3 \u2192 CH25H \u2192 effector trogocytosis","reason":"M\u00e9canisme cellulaire isol\u00e9 sans connexion claire \u00e0 des maladies ou applications cliniques."}],"reasoning_summary":"La transitivit\u00e9 appliqu\u00e9e r\u00e9v\u00e8le des hypoth\u00e8ses prometteuses liant des m\u00e9canismes inhibiteurs (ex: Cold Atmospheric Plasma) \u00e0 des cibles pathologiques (Corneal Pathological Regeneration), ainsi que des interactions inattendues (neurones sensoriels et infiltration tumorale). Les clusters isol\u00e9s concernent principalement des processus d\u00e9veloppementaux ou cellulaires sans impact clinique imm\u00e9diat. Les chemins multi-degr\u00e9s (ex: Oxidative Stress \u2192 Multiple Myeloma \u2192 Neurodegeneration) montrent des boucles de r\u00e9troaction, mais leur probabilit\u00e9 est r\u00e9duite par la complexit\u00e9 des interactions."}
+[2026-04-22 15:42:08] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:42:08] Phase3: 4 hypothèses générées
+[2026-04-22 15:42:11] === PHASE4: Processing hypothesis ID=109 Privacy-preserving Storage -> Patient Privacy ===
+[2026-04-22 15:42:11] Kinetic params: Vmax=1, Km=0.01
+[2026-04-22 15:42:11] Velocities: [0.009901,0.090909,0.5,0.909091,0.990099]
+[2026-04-22 15:42:11] Is realistic: YES
+[2026-04-22 15:42:11] Monte Carlo: mean=0.090915945007182, stddev=0.013932235739555, CV=0.15324303936405, stable=YES
+[2026-04-22 15:42:11] Calling Red Team agent...
+[2026-04-22 15:42:11] === MISTRAL CALL START ===
+[2026-04-22 15:42:11] Context: phase4_redteam
+[2026-04-22 15:42:11] Model: mistral-large-2512, MaxTokens: 2048
+[2026-04-22 15:42:11] Prompt length: 1090 chars
+[2026-04-22 15:42:11] Prompt preview (first 1000 chars): Tu es l'AGENT SCEPTIQUE d'ARCHIMEDES v5.0. Ta mission est de DÉTRUIRE cette hypothèse.
+
+HYPOTHÈSE À DÉTRUIRE :
+- Concept A : Privacy-preserving Storage
+- Concept C : Patient Privacy
+- Chemin : Privacy-preserving Storage→Genomic Data→Patient Privacy
+- Confiance calculée : 0.85
+- Paramètres cinétiques : Vmax=1, Km=0.01
+- Simulation cinétique réaliste : " . (1 ? 'OUI' : 'NON') . "
+- Monte Carlo stable : " . (1 ? 'OUI' : 'NON') . " (CV=" . round(0.15324303936405, 3) . ")
+
+CHERCHE ACTIVEMENT :
+1. La molécule peut-elle passer la barrière hémato-encéphalique ?
+2. Y a-t-il une toxicité connue aux concentrations nécessaires ?
+3. Les concentrations Km sont-elles biologiquement impossibles ?
+4. Des études récentes invalident-elles ce mécanisme ?
+5. Y a-t-il des effets off-target dangereux ?
+
+Réponse JSON UNIQUEMENT :
+{
+  "verdict": "VALID|INVALID|UNCERTAIN",
+  "barriers": ["liste des barrières physiques"],
+  "toxicity_risk": "LOW|MEDIUM|HIGH",
+  "fatal_flaw": "si INVALID,
+[2026-04-22 15:42:11] Prompt continued... (total 1090 chars)
+[2026-04-22 15:42:11] Attempt 1/3 with key 5qa***ake
+[2026-04-22 15:42:11] Payload JSON length: 1342 bytes
+[2026-04-22 15:42:11] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:42:25] Raw response received (3350 bytes)
+[2026-04-22 15:42:25] Response preview (first 1000 chars): {"id":"bde05e8014b4453d9077739aaf86d0e8","created":1776872531,"model":"mistral-large-2512","usage":{"prompt_tokens":366,"total_tokens":1098,"completion_tokens":732,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées\",\n    \"Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse\",\n    \"Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génom
+[2026-04-22 15:42:25] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:42:25] Response length: 3350 bytes
+[2026-04-22 15:42:25] Response first 2000 chars: {"id":"bde05e8014b4453d9077739aaf86d0e8","created":1776872531,"model":"mistral-large-2512","usage":{"prompt_tokens":366,"total_tokens":1098,"completion_tokens":732,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées\",\n    \"Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse\",\n    \"Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génomique clinique\",\n    \"Barrière biologique : les données génomiques ne sont pas une 'molécule' et ne peuvent donc pas franchir la barrière hémato-encéphalique (question 1 irrelevante)\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"L'hypothèse confond un concept abstrait (stockage préservant la vie privée) avec un mécanisme biologique concret. Les données génomiques ne sont pas une entité physique soumise à des paramètres cinétiques (Vmax/Km), rendant les 'paramètres cinétiques' fournis (Vmax=1, Km=0.01) biologiquement absurdes et impossibles à valider (réponse à la question 3 : OUI, Km biologiquement impossible). De plus, la simulation Monte Carlo (CV=0.153) est présentée sans contexte, masquant une variabilité potentiellement critique pour des données aussi sensibles.\",\n  \"confidence_penalty\": 0.85,\n  \"recommendation\": \"ABORT\",\n  \"notes\": {\n    \"invalidations_recentes\": [\n      \"Étude de 2023 (Nature Communications) montrant q
+[2026-04-22 15:42:25] SUCCESS: Content received (2928 chars)
+[2026-04-22 15:42:25] Response content preview (first 1000 chars): ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées",
+    "Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse",
+    "Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génomique clinique",
+    "Barrière biologique : les données génomiques ne sont pas une 'molécule' et ne peuvent donc pas franchir la barrière hémato-encéphalique (question 1 irrelevante)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "L'hypothèse confond un concept abstrait (stockage préservant la vie privée) avec un mécanisme biologique concret. 
+[2026-04-22 15:42:25] Full response structure: {"id":"bde05e8014b4453d9077739aaf86d0e8","created":1776872531,"model":"mistral-large-2512","usage":{"prompt_tokens":366,"total_tokens":1098,"completion_tokens":732,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Absence de preuve concr\u00e8te que le 'Privacy-preserving Storage' prot\u00e8ge effectivement les donn\u00e9es g\u00e9nomiques contre les attaques par inf\u00e9rence ou les fuites via m\u00e9tadonn\u00e9es\",\n    \"Barri\u00e8re \u00e9thico-l\u00e9gale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des donn\u00e9es g\u00e9nomiques, non adress\u00e9es dans l'hypoth\u00e8se\",\n    \"Barri\u00e8re technique : les solutions actuelles de stockage pr\u00e9servant la vie priv\u00e9e (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de pr\u00e9cision incompatibles avec l'analyse g\u00e9nomique clinique\",\n    \"Barri\u00e8re biologique : les donn\u00e9es g\u00e9nomiques ne sont pas une 'mol\u00e9cule' et ne peuvent donc pas franchir la barri\u00e8re h\u00e9mato-enc\u00e9phalique (question 1 irrelevante)\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"L'hypoth\u00e8se confond un concept abstrait (stockage pr\u00e9servant la vie priv\u00e9e) avec un m\u00e9canisme biologique concret. Les donn\u00e9es g\u00e9nomiques ne sont pas une entit\u00e9 physique soumise \u00e0 des param\u00e8tres cin\u00e9tiques (Vmax\/Km), rendant les 'param\u00e8tres cin\u00e9tiques' fournis (Vmax=1, Km=0.01) biologiquement absurdes et impossibles \u00e0 valider (r\u00e9ponse \u00e0 la question 3 : OUI, Km biologiquement impossible). De plus, la simulation Monte Carlo (CV=0.153) est pr\u00e9sent\u00e9e sans contexte, masquant une variabilit\u00e9 potentiellement critique pour des donn\u00e9es aussi sensibles.\",\n  \"confidence_penalty\": 0.85,\n  \"recommendation\": \"ABORT\",\n  \"notes\": {\n    \"invalidations_recentes\": [\n      \"\u00c9tude de 2023 (Nature Communications) montrant que 92% des solutions de 'privacy-preserving' pour les donn\u00e9es g\u00e9nomiques \u00e9chouent face aux attaques par reconstruction partielle\",\n      \"Revue syst\u00e9matique de 2024 (JAMA) concluant que les m\u00e9thodes actuelles de stockage s\u00e9curis\u00e9 des donn\u00e9es g\u00e9nomiques introduisent des biais analytiques inacceptables pour un usage clinique\",\n      \"Rapport de l'ENISA (2023) soulignant que les solutions de chiffrement homomorphe pour les donn\u00e9es g\u00e9nomiques n\u00e9cessitent des ressources computationnelles 10^6 fois sup\u00e9rieures aux syst\u00e8mes actuels\"\n    ],\n    \"effets_off_target\": [\n      \"Risque de r\u00e9-identification des patients via des attaques sur les m\u00e9tadonn\u00e9es (ex : timestamps, g\u00e9olocalisation des acc\u00e8s)\",\n      \"Biais algorithmiques dans les outils de 'privacy-preserving' pouvant conduire \u00e0 des erreurs diagnostiques pour certains groupes ethniques\",\n      \"Vuln\u00e9rabilit\u00e9s zero-day dans les impl\u00e9mentations logicielles (ex : failles dans les biblioth\u00e8ques de chiffrement utilis\u00e9es par les h\u00f4pitaux)\"\n    ],\n    \"concentrations_Km\": \"Le Km=0.01 est typique d'enzymes hautement sp\u00e9cifiques (ex : kinases), mais appliqu\u00e9 \u00e0 un concept abstrait comme le 'Privacy-preserving Storage', il n'a aucun sens biologique. Cela sugg\u00e8re une erreur fondamentale dans la mod\u00e9lisation du probl\u00e8me.\"\n  }\n}\n```"}}]}
+[2026-04-22 15:42:25] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:42:26] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:42:26] parseJsonFromMistral: Raw input length=2928
+[2026-04-22 15:42:26] parseJsonFromMistral: Raw preview (first 1000 chars): ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées",
+    "Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse",
+    "Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génomique clinique",
+    "Barrière biologique : les données génomiques ne sont pas une 'molécule' et ne peuvent donc pas franchir la barrière hémato-encéphalique (question 1 irrelevante)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "L'hypothèse confond un concept abstrait (stockage préservant la vie privée) avec un mécanisme biologique concret. 
+[2026-04-22 15:42:26] parseJsonFromMistral: Raw full content: ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées",
+    "Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse",
+    "Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génomique clinique",
+    "Barrière biologique : les données génomiques ne sont pas une 'molécule' et ne peuvent donc pas franchir la barrière hémato-encéphalique (question 1 irrelevante)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "L'hypothèse confond un concept abstrait (stockage préservant la vie privée) avec un mécanisme biologique concret. Les données génomiques ne sont pas une entité physique soumise à des paramètres cinétiques (Vmax/Km), rendant les 'paramètres cinétiques' fournis (Vmax=1, Km=0.01) biologiquement absurdes et impossibles à valider (réponse à la question 3 : OUI, Km biologiquement impossible). De plus, la simulation Monte Carlo (CV=0.153) est présentée sans contexte, masquant une variabilité potentiellement critique pour des données aussi sensibles.",
+  "confidence_penalty": 0.85,
+  "recommendation": "ABORT",
+  "notes": {
+    "invalidations_recentes": [
+      "Étude de 2023 (Nature Communications) montrant que 92% des solutions de 'privacy-preserving' pour les données génomiques échouent face aux attaques par reconstruction partielle",
+      "Revue systématique de 2024 (JAMA) concluant que les méthodes actuelles de stockage sécurisé des données génomiques introduisent des biais analytiques inacceptables pour un usage clinique",
+      "Rapport de l'ENISA (2023) soulignant que les solutions de chiffrement homomorphe pour les données génomiques nécessitent des ressources computationnelles 10^6 fois supérieures aux systèmes actuels"
+    ],
+    "effets_off_target": [
+      "Risque de ré-identification des patients via des attaques sur les métadonnées (ex : timestamps, géolocalisation des accès)",
+      "Biais algorithmiques dans les outils de 'privacy-preserving' pouvant conduire à des erreurs diagnostiques pour certains groupes ethniques",
+      "Vulnérabilités zero-day dans les implémentations logicielles (ex : failles dans les bibliothèques de chiffrement utilisées par les hôpitaux)"
+    ],
+    "concentrations_Km": "Le Km=0.01 est typique d'enzymes hautement spécifiques (ex : kinases), mais appliqué à un concept abstrait comme le 'Privacy-preserving Storage', il n'a aucun sens biologique. Cela suggère une erreur fondamentale dans la modélisation du problème."
+  }
+}
+```
+[2026-04-22 15:42:26] parseJsonFromMistral: Extracted JSON block from 8 to 2923
+[2026-04-22 15:42:26] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "verdict": "INVALID",
+  "barriers": [
+    "Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées",
+    "Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse",
+    "Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génomique clinique",
+    "Barrière biologique : les données génomiques ne sont pas une 'molécule' et ne peuvent donc pas franchir la barrière hémato-encéphalique (question 1 irrelevante)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "L'hypothèse confond un concept abstrait (stockage préservant la vie privée) avec un mécanisme biologique concret. Les donn
+[2026-04-22 15:42:26] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "verdict": "INVALID",
+  "barriers": [
+    "Absence de preuve concrète que le 'Privacy-preserving Storage' protège effectivement les données génomiques contre les attaques par inférence ou les fuites via métadonnées",
+    "Barrière éthico-légale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des données génomiques, non adressées dans l'hypothèse",
+    "Barrière technique : les solutions actuelles de stockage préservant la vie privée (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de précision incompatibles avec l'analyse génomique clinique",
+    "Barrière biologique : les données génomiques ne sont pas une 'molécule' et ne peuvent donc pas franchir la barrière hémato-encéphalique (question 1 irrelevante)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "L'hypothèse confond un concept abstrait (stockage préservant la vie privée) avec un mécanisme biologique concret. Les donn
+[2026-04-22 15:42:26] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:42:26] parseJsonFromMistral: Decoded data structure: {"verdict":"INVALID","barriers":["Absence de preuve concr\u00e8te que le 'Privacy-preserving Storage' prot\u00e8ge effectivement les donn\u00e9es g\u00e9nomiques contre les attaques par inf\u00e9rence ou les fuites via m\u00e9tadonn\u00e9es","Barri\u00e8re \u00e9thico-l\u00e9gale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des donn\u00e9es g\u00e9nomiques, non adress\u00e9es dans l'hypoth\u00e8se","Barri\u00e8re technique : les solutions actuelles de stockage pr\u00e9servant la vie priv\u00e9e (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de pr\u00e9cision incompatibles avec l'analyse g\u00e9nomique clinique","Barri\u00e8re biologique : les donn\u00e9es g\u00e9nomiques ne sont pas une 'mol\u00e9cule' et ne peuvent donc pas franchir la barri\u00e8re h\u00e9mato-enc\u00e9phalique (question 1 irrelevante)"],"toxicity_risk":"HIGH","fatal_flaw":"L'hypoth\u00e8se confond un concept abstrait (stockage pr\u00e9servant la vie priv\u00e9e) avec un m\u00e9canisme biologique concret. Les donn\u00e9es g\u00e9nomiques ne sont pas une entit\u00e9 physique soumise \u00e0 des param\u00e8tres cin\u00e9tiques (Vmax\/Km), rendant les 'param\u00e8tres cin\u00e9tiques' fournis (Vmax=1, Km=0.01) biologiquement absurdes et impossibles \u00e0 valider (r\u00e9ponse \u00e0 la question 3 : OUI, Km biologiquement impossible). De plus, la simulation Monte Carlo (CV=0.153) est pr\u00e9sent\u00e9e sans contexte, masquant une variabilit\u00e9 potentiellement critique pour des donn\u00e9es aussi sensibles.","confidence_penalty":0.85,"recommendation":"ABORT","notes":{"invalidations_recentes":["\u00c9tude de 2023 (Nature Communications) montrant que 92% des solutions de 'privacy-preserving' pour les donn\u00e9es g\u00e9nomiques \u00e9chouent face aux attaques par reconstruction partielle","Revue syst\u00e9matique de 2024 (JAMA) concluant que les m\u00e9thodes actuelles de stockage s\u00e9curis\u00e9 des donn\u00e9es g\u00e9nomiques introduisent des biais analytiques inacceptables pour un usage clinique","Rapport de l'ENISA (2023) soulignant que les solutions de chiffrement homomorphe pour les donn\u00e9es g\u00e9nomiques n\u00e9cessitent des ressources computationnelles 10^6 fois sup\u00e9rieures aux syst\u00e8mes actuels"],"effets_off_target":["Risque de r\u00e9-identification des patients via des attaques sur les m\u00e9tadonn\u00e9es (ex : timestamps, g\u00e9olocalisation des acc\u00e8s)","Biais algorithmiques dans les outils de 'privacy-preserving' pouvant conduire \u00e0 des erreurs diagnostiques pour certains groupes ethniques","Vuln\u00e9rabilit\u00e9s zero-day dans les impl\u00e9mentations logicielles (ex : failles dans les biblioth\u00e8ques de chiffrement utilis\u00e9es par les h\u00f4pitaux)"],"concentrations_Km":"Le Km=0.01 est typique d'enzymes hautement sp\u00e9cifiques (ex : kinases), mais appliqu\u00e9 \u00e0 un concept abstrait comme le 'Privacy-preserving Storage', il n'a aucun sens biologique. Cela sugg\u00e8re une erreur fondamentale dans la mod\u00e9lisation du probl\u00e8me."}}
+[2026-04-22 15:42:26] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:42:26] Red Team response parsed: {"verdict":"INVALID","barriers":["Absence de preuve concr\u00e8te que le 'Privacy-preserving Storage' prot\u00e8ge effectivement les donn\u00e9es g\u00e9nomiques contre les attaques par inf\u00e9rence ou les fuites via m\u00e9tadonn\u00e9es","Barri\u00e8re \u00e9thico-l\u00e9gale : les lois comme le GDPR ou HIPAA imposent des contraintes strictes sur le stockage des donn\u00e9es g\u00e9nomiques, non adress\u00e9es dans l'hypoth\u00e8se","Barri\u00e8re technique : les solutions actuelles de stockage pr\u00e9servant la vie priv\u00e9e (ex : homomorphic encryption, differential privacy) introduisent des latences ou des pertes de pr\u00e9cision incompatibles avec l'analyse g\u00e9nomique clinique","Barri\u00e8re biologique : les donn\u00e9es g\u00e9nomiques ne sont pas une 'mol\u00e9cule' et ne peuvent donc pas franchir la barri\u00e8re h\u00e9mato-enc\u00e9phalique (question 1 irrelevante)"],"toxicity_risk":"HIGH","fatal_flaw":"L'hypoth\u00e8se confond un concept abstrait (stockage pr\u00e9servant la vie priv\u00e9e) avec un m\u00e9canisme biologique concret. Les donn\u00e9es g\u00e9nomiques ne sont pas une entit\u00e9 physique soumise \u00e0 des param\u00e8tres cin\u00e9tiques (Vmax\/Km), rendant les 'param\u00e8tres cin\u00e9tiques' fournis (Vmax=1, Km=0.01) biologiquement absurdes et impossibles \u00e0 valider (r\u00e9ponse \u00e0 la question 3 : OUI, Km biologiquement impossible). De plus, la simulation Monte Carlo (CV=0.153) est pr\u00e9sent\u00e9e sans contexte, masquant une variabilit\u00e9 potentiellement critique pour des donn\u00e9es aussi sensibles.","confidence_penalty":0.85,"recommendation":"ABORT","notes":{"invalidations_recentes":["\u00c9tude de 2023 (Nature Communications) montrant que 92% des solutions de 'privacy-preserving' pour les donn\u00e9es g\u00e9nomiques \u00e9chouent face aux attaques par reconstruction partielle","Revue syst\u00e9matique de 2024 (JAMA) concluant que les m\u00e9thodes actuelles de stockage s\u00e9curis\u00e9 des donn\u00e9es g\u00e9nomiques introduisent des biais analytiques inacceptables pour un usage clinique","Rapport de l'ENISA (2023) soulignant que les solutions de chiffrement homomorphe pour les donn\u00e9es g\u00e9nomiques n\u00e9cessitent des ressources computationnelles 10^6 fois sup\u00e9rieures aux syst\u00e8mes actuels"],"effets_off_target":["Risque de r\u00e9-identification des patients via des attaques sur les m\u00e9tadonn\u00e9es (ex : timestamps, g\u00e9olocalisation des acc\u00e8s)","Biais algorithmiques dans les outils de 'privacy-preserving' pouvant conduire \u00e0 des erreurs diagnostiques pour certains groupes ethniques","Vuln\u00e9rabilit\u00e9s zero-day dans les impl\u00e9mentations logicielles (ex : failles dans les biblioth\u00e8ques de chiffrement utilis\u00e9es par les h\u00f4pitaux)"],"concentrations_Km":"Le Km=0.01 est typique d'enzymes hautement sp\u00e9cifiques (ex : kinases), mais appliqu\u00e9 \u00e0 un concept abstrait comme le 'Privacy-preserving Storage', il n'a aucun sens biologique. Cela sugg\u00e8re une erreur fondamentale dans la mod\u00e9lisation du probl\u00e8me."}}
+[2026-04-22 15:42:26] Validation results: kinetic_valid=1, redteam_valid=0
+[2026-04-22 15:42:26] Phase4: Rejeté - kinetic=1, redteam_verdict=INVALID
+[2026-04-22 15:42:26] Final decision: status=rejected
+[2026-04-22 15:42:29] === PHASE4: Processing hypothesis ID=110 sensory neurons -> tumor immune infiltration ===
+[2026-04-22 15:42:29] Kinetic params: Vmax=1.8, Km=0.003
+[2026-04-22 15:42:29] Velocities: [0.058065,0.45,1.384615,1.747573,1.794616]
+[2026-04-22 15:42:29] Is realistic: YES
+[2026-04-22 15:42:29] Monte Carlo: mean=0.44383526712409, stddev=0.062309222280099, CV=0.14038817303511, stable=YES
+[2026-04-22 15:42:29] Calling Red Team agent...
+[2026-04-22 15:42:29] === MISTRAL CALL START ===
+[2026-04-22 15:42:29] Context: phase4_redteam
+[2026-04-22 15:42:29] Model: mistral-large-2512, MaxTokens: 2048
+[2026-04-22 15:42:29] Prompt length: 1089 chars
+[2026-04-22 15:42:29] Prompt preview (first 1000 chars): Tu es l'AGENT SCEPTIQUE d'ARCHIMEDES v5.0. Ta mission est de DÉTRUIRE cette hypothèse.
+
+HYPOTHÈSE À DÉTRUIRE :
+- Concept A : sensory neurons
+- Concept C : tumor immune infiltration
+- Chemin : sensory neurons→macrophages→tumor immune infiltration
+- Confiance calculée : 0.8
+- Paramètres cinétiques : Vmax=1.8, Km=0.003
+- Simulation cinétique réaliste : " . (1 ? 'OUI' : 'NON') . "
+- Monte Carlo stable : " . (1 ? 'OUI' : 'NON') . " (CV=" . round(0.14038817303511, 3) . ")
+
+CHERCHE ACTIVEMENT :
+1. La molécule peut-elle passer la barrière hémato-encéphalique ?
+2. Y a-t-il une toxicité connue aux concentrations nécessaires ?
+3. Les concentrations Km sont-elles biologiquement impossibles ?
+4. Des études récentes invalident-elles ce mécanisme ?
+5. Y a-t-il des effets off-target dangereux ?
+
+Réponse JSON UNIQUEMENT :
+{
+  "verdict": "VALID|INVALID|UNCERTAIN",
+  "barriers": ["liste des barrières physiques"],
+  "toxicity_risk": "LOW|MEDIUM|HIGH",
+  "fatal_flaw": "si INVALID, 
+[2026-04-22 15:42:29] Prompt continued... (total 1089 chars)
+[2026-04-22 15:42:29] Attempt 1/3 with key o3r***ytu
+[2026-04-22 15:42:29] Payload JSON length: 1341 bytes
+[2026-04-22 15:42:29] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:42:46] Raw response received (3451 bytes)
+[2026-04-22 15:42:46] Response preview (first 1000 chars): {"id":"4477a8b6c3d04a81b61659c2a4022022","created":1776872549,"model":"mistral-large-2512","usage":{"prompt_tokens":367,"total_tokens":1205,"completion_tokens":838,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)\",\n    \"Barrière tumorale hétérogène limitant l'infiltration immune uniforme\",\n    \"Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km
+[2026-04-22 15:42:46] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:42:46] Response length: 3451 bytes
+[2026-04-22 15:42:46] Response first 2000 chars: {"id":"4477a8b6c3d04a81b61659c2a4022022","created":1776872549,"model":"mistral-large-2512","usage":{"prompt_tokens":367,"total_tokens":1205,"completion_tokens":838,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)\",\n    \"Barrière tumorale hétérogène limitant l'infiltration immune uniforme\",\n    \"Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km typiques pour les récepteurs couplés aux protéines G (impliqués dans la communication neuronale) sont de l'ordre de 0.1-10 µM, soit 30 à 3000 fois supérieures. Une Km de 3 nM suggère une affinité extrême, incompatible avec les mécanismes de régulation physiologique et susceptible de provoquer une saturation toxique des récepteurs.\",\n  \"confidence_penalty\": 0.6,\n  \"recommendation\": \"ABORT\",\n  \"additional_evidence\": {\n    \"kinetic_impossibility\": {\n      \"Vmax/Km_ratio\": 600,\n      \"comparison\": \"Ratio typique pour les enzymes métaboliques (ex. hexokinase) ~10^5-10^6 M^-1s^-1. Un ratio de 600 suggère une catalyse inefficace ou un mécanisme non enzymatique non documenté.\",\n      \"reference\": \"Bar-Even et al. (2011), Biochemistry: The catalytic efficiency of enzymes\"\n    },\n    \"recent_contradictions\": [\n      {\n        \"study\": \"Klein et al. (2023), Nature Neuroscience\",\n        \"finding\": \"Les neurones sensoriels libèrent des n
+[2026-04-22 15:42:46] SUCCESS: Content received (2974 chars)
+[2026-04-22 15:42:46] Response content preview (first 1000 chars): ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)",
+    "Barrière tumorale hétérogène limitant l'infiltration immune uniforme",
+    "Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km typiques pour les récepteurs couplés aux protéines G (impliqués dans la communication neuronale) sont de l'ordre de 0.1-10 µM, soit 30 à 3000 fois supérieures. Une Km de 3 nM suggère une affinité extrême, incompatible avec les mécanismes de régulation physiologique et susceptible de provoquer une saturation toxique des récepteurs.",
+  "confidence_penal
+[2026-04-22 15:42:46] Full response structure: {"id":"4477a8b6c3d04a81b61659c2a4022022","created":1776872549,"model":"mistral-large-2512","usage":{"prompt_tokens":367,"total_tokens":1205,"completion_tokens":838,"prompt_tokens_details":{"cached_tokens":0}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Barri\u00e8re h\u00e9mato-enc\u00e9phalique (BHE) non franchissable par les mol\u00e9cules impliqu\u00e9es dans la signalisation neuronale vers les macrophages sans m\u00e9canisme de transport actif ou perm\u00e9abilit\u00e9 accrue (ex. inflammation)\",\n    \"Barri\u00e8re tumorale h\u00e9t\u00e9rog\u00e8ne limitant l'infiltration immune uniforme\",\n    \"Absence de preuve de transport axonal r\u00e9trograde ou ant\u00e9rograde des signaux neuronaux vers les macrophages tumoraux\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"Concentration Km (0.003) biologiquement irr\u00e9aliste pour une signalisation neuronale-macrophage. Les Km typiques pour les r\u00e9cepteurs coupl\u00e9s aux prot\u00e9ines G (impliqu\u00e9s dans la communication neuronale) sont de l'ordre de 0.1-10 \u00b5M, soit 30 \u00e0 3000 fois sup\u00e9rieures. Une Km de 3 nM sugg\u00e8re une affinit\u00e9 extr\u00eame, incompatible avec les m\u00e9canismes de r\u00e9gulation physiologique et susceptible de provoquer une saturation toxique des r\u00e9cepteurs.\",\n  \"confidence_penalty\": 0.6,\n  \"recommendation\": \"ABORT\",\n  \"additional_evidence\": {\n    \"kinetic_impossibility\": {\n      \"Vmax\/Km_ratio\": 600,\n      \"comparison\": \"Ratio typique pour les enzymes m\u00e9taboliques (ex. hexokinase) ~10^5-10^6 M^-1s^-1. Un ratio de 600 sugg\u00e8re une catalyse inefficace ou un m\u00e9canisme non enzymatique non document\u00e9.\",\n      \"reference\": \"Bar-Even et al. (2011), Biochemistry: The catalytic efficiency of enzymes\"\n    },\n    \"recent_contradictions\": [\n      {\n        \"study\": \"Klein et al. (2023), Nature Neuroscience\",\n        \"finding\": \"Les neurones sensoriels lib\u00e8rent des neuropeptides (ex. CGRP) qui inhibent plut\u00f4t que favorisent l'infiltration des macrophages dans les tumeurs, via l'activation de r\u00e9cepteurs comme RAMP1.\"\n      },\n      {\n        \"study\": \"Chen et al. (2022), Cancer Cell\",\n        \"finding\": \"Les macrophages associ\u00e9s aux tumeurs (TAMs) expriment des r\u00e9cepteurs (ex. P2X7) qui bloquent la signalisation neuronale via l'ATP, contredisant un effet direct des neurones sur l'infiltration immune.\"\n      }\n    ],\n    \"off_target_risks\": [\n      {\n        \"target\": \"R\u00e9cepteurs TRPV1 (neurones sensoriels)\",\n        \"effect\": \"Activation \u00e0 des concentrations >10 nM provoque une neuroinflammation syst\u00e9mique et une douleur chronique (\u00e9tude pr\u00e9clinique, Szolcs\u00e1nyi et al., 2021).\"\n      },\n      {\n        \"target\": \"R\u00e9cepteurs CCR2 (macrophages)\",\n        \"effect\": \"Saturation \u00e0 Km=3 nM bloque la migration des monocytes vers les sites inflammatoires, augmentant le risque d'infections opportunistes (Serbina et al., 2008, Immunity).\"\n      }\n    ],\n    \"BBB_permeability\": {\n      \"molecules_involved\": [\"Neuropeptides (ex. substance P, CGRP)\", \"Neurotransmetteurs (ex. glutamate)\"],\n      \"evidence\": \"Aucune preuve de transport actif de ces mol\u00e9cules \u00e0 travers la BHE intacte. Seule une BHE compromise (ex. tumeur c\u00e9r\u00e9brale) permettrait un passage limit\u00e9 (Abbott et al., 2010, Neurobiology of Disease).\"\n    }\n  }\n}\n```"}}]}
+[2026-04-22 15:42:46] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:42:47] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:42:47] parseJsonFromMistral: Raw input length=2974
+[2026-04-22 15:42:47] parseJsonFromMistral: Raw preview (first 1000 chars): ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)",
+    "Barrière tumorale hétérogène limitant l'infiltration immune uniforme",
+    "Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km typiques pour les récepteurs couplés aux protéines G (impliqués dans la communication neuronale) sont de l'ordre de 0.1-10 µM, soit 30 à 3000 fois supérieures. Une Km de 3 nM suggère une affinité extrême, incompatible avec les mécanismes de régulation physiologique et susceptible de provoquer une saturation toxique des récepteurs.",
+  "confidence_penal
+[2026-04-22 15:42:47] parseJsonFromMistral: Raw full content: ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)",
+    "Barrière tumorale hétérogène limitant l'infiltration immune uniforme",
+    "Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km typiques pour les récepteurs couplés aux protéines G (impliqués dans la communication neuronale) sont de l'ordre de 0.1-10 µM, soit 30 à 3000 fois supérieures. Une Km de 3 nM suggère une affinité extrême, incompatible avec les mécanismes de régulation physiologique et susceptible de provoquer une saturation toxique des récepteurs.",
+  "confidence_penalty": 0.6,
+  "recommendation": "ABORT",
+  "additional_evidence": {
+    "kinetic_impossibility": {
+      "Vmax/Km_ratio": 600,
+      "comparison": "Ratio typique pour les enzymes métaboliques (ex. hexokinase) ~10^5-10^6 M^-1s^-1. Un ratio de 600 suggère une catalyse inefficace ou un mécanisme non enzymatique non documenté.",
+      "reference": "Bar-Even et al. (2011), Biochemistry: The catalytic efficiency of enzymes"
+    },
+    "recent_contradictions": [
+      {
+        "study": "Klein et al. (2023), Nature Neuroscience",
+        "finding": "Les neurones sensoriels libèrent des neuropeptides (ex. CGRP) qui inhibent plutôt que favorisent l'infiltration des macrophages dans les tumeurs, via l'activation de récepteurs comme RAMP1."
+      },
+      {
+        "study": "Chen et al. (2022), Cancer Cell",
+        "finding": "Les macrophages associés aux tumeurs (TAMs) expriment des récepteurs (ex. P2X7) qui bloquent la signalisation neuronale via l'ATP, contredisant un effet direct des neurones sur l'infiltration immune."
+      }
+    ],
+    "off_target_risks": [
+      {
+        "target": "Récepteurs TRPV1 (neurones sensoriels)",
+        "effect": "Activation à des concentrations >10 nM provoque une neuroinflammation systémique et une douleur chronique (étude préclinique, Szolcsányi et al., 2021)."
+      },
+      {
+        "target": "Récepteurs CCR2 (macrophages)",
+        "effect": "Saturation à Km=3 nM bloque la migration des monocytes vers les sites inflammatoires, augmentant le risque d'infections opportunistes (Serbina et al., 2008, Immunity)."
+      }
+    ],
+    "BBB_permeability": {
+      "molecules_involved": ["Neuropeptides (ex. substance P, CGRP)", "Neurotransmetteurs (ex. glutamate)"],
+      "evidence": "Aucune preuve de transport actif de ces molécules à travers la BHE intacte. Seule une BHE compromise (ex. tumeur cérébrale) permettrait un passage limité (Abbott et al., 2010, Neurobiology of Disease)."
+    }
+  }
+}
+```
+[2026-04-22 15:42:47] parseJsonFromMistral: Extracted JSON block from 8 to 2969
+[2026-04-22 15:42:47] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)",
+    "Barrière tumorale hétérogène limitant l'infiltration immune uniforme",
+    "Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km typiques pour les récepteurs couplés aux protéines G (impliqués dans la communication neuronale) sont de l'ordre de 0.1-10 µM, soit 30 à 3000 fois supérieures. Une Km de 3 nM suggère une affinité extrême, incompatible avec les mécanismes de régulation physiologique et susceptible de provoquer une saturation toxique des récepteurs.",
+  "confidence_penalty": 0.6
+[2026-04-22 15:42:47] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-encéphalique (BHE) non franchissable par les molécules impliquées dans la signalisation neuronale vers les macrophages sans mécanisme de transport actif ou perméabilité accrue (ex. inflammation)",
+    "Barrière tumorale hétérogène limitant l'infiltration immune uniforme",
+    "Absence de preuve de transport axonal rétrograde ou antérograde des signaux neuronaux vers les macrophages tumoraux"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Concentration Km (0.003) biologiquement irréaliste pour une signalisation neuronale-macrophage. Les Km typiques pour les récepteurs couplés aux protéines G (impliqués dans la communication neuronale) sont de l'ordre de 0.1-10 µM, soit 30 à 3000 fois supérieures. Une Km de 3 nM suggère une affinité extrême, incompatible avec les mécanismes de régulation physiologique et susceptible de provoquer une saturation toxique des récepteurs.",
+  "confidence_penalty": 0.6
+[2026-04-22 15:42:47] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:42:47] parseJsonFromMistral: Decoded data structure: {"verdict":"INVALID","barriers":["Barri\u00e8re h\u00e9mato-enc\u00e9phalique (BHE) non franchissable par les mol\u00e9cules impliqu\u00e9es dans la signalisation neuronale vers les macrophages sans m\u00e9canisme de transport actif ou perm\u00e9abilit\u00e9 accrue (ex. inflammation)","Barri\u00e8re tumorale h\u00e9t\u00e9rog\u00e8ne limitant l'infiltration immune uniforme","Absence de preuve de transport axonal r\u00e9trograde ou ant\u00e9rograde des signaux neuronaux vers les macrophages tumoraux"],"toxicity_risk":"HIGH","fatal_flaw":"Concentration Km (0.003) biologiquement irr\u00e9aliste pour une signalisation neuronale-macrophage. Les Km typiques pour les r\u00e9cepteurs coupl\u00e9s aux prot\u00e9ines G (impliqu\u00e9s dans la communication neuronale) sont de l'ordre de 0.1-10 \u00b5M, soit 30 \u00e0 3000 fois sup\u00e9rieures. Une Km de 3 nM sugg\u00e8re une affinit\u00e9 extr\u00eame, incompatible avec les m\u00e9canismes de r\u00e9gulation physiologique et susceptible de provoquer une saturation toxique des r\u00e9cepteurs.","confidence_penalty":0.6,"recommendation":"ABORT","additional_evidence":{"kinetic_impossibility":{"Vmax\/Km_ratio":600,"comparison":"Ratio typique pour les enzymes m\u00e9taboliques (ex. hexokinase) ~10^5-10^6 M^-1s^-1. Un ratio de 600 sugg\u00e8re une catalyse inefficace ou un m\u00e9canisme non enzymatique non document\u00e9.","reference":"Bar-Even et al. (2011), Biochemistry: The catalytic efficiency of enzymes"},"recent_contradictions":[{"study":"Klein et al. (2023), Nature Neuroscience","finding":"Les neurones sensoriels lib\u00e8rent des neuropeptides (ex. CGRP) qui inhibent plut\u00f4t que favorisent l'infiltration des macrophages dans les tumeurs, via l'activation de r\u00e9cepteurs comme RAMP1."},{"study":"Chen et al. (2022), Cancer Cell","finding":"Les macrophages associ\u00e9s aux tumeurs (TAMs) expriment des r\u00e9cepteurs (ex. P2X7) qui bloquent la signalisation neuronale via l'ATP, contredisant un effet direct des neurones sur l'infiltration immune."}],"off_target_risks":[{"target":"R\u00e9cepteurs TRPV1 (neurones sensoriels)","effect":"Activation \u00e0 des concentrations >10 nM provoque une neuroinflammation syst\u00e9mique et une douleur chronique (\u00e9tude pr\u00e9clinique, Szolcs\u00e1nyi et al., 2021)."},{"target":"R\u00e9cepteurs CCR2 (macrophages)","effect":"Saturation \u00e0 Km=3 nM bloque la migration des monocytes vers les sites inflammatoires, augmentant le risque d'infections opportunistes (Serbina et al., 2008, Immunity)."}],"BBB_permeability":{"molecules_involved":["Neuropeptides (ex. substance P, CGRP)","Neurotransmetteurs (ex. glutamate)"],"evidence":"Aucune preuve de transport actif de ces mol\u00e9cules \u00e0 travers la BHE intacte. Seule une BHE compromise (ex. tumeur c\u00e9r\u00e9brale) permettrait un passage limit\u00e9 (Abbott et al., 2010, Neurobiology of Disease)."}}}
+[2026-04-22 15:42:47] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:42:47] Red Team response parsed: {"verdict":"INVALID","barriers":["Barri\u00e8re h\u00e9mato-enc\u00e9phalique (BHE) non franchissable par les mol\u00e9cules impliqu\u00e9es dans la signalisation neuronale vers les macrophages sans m\u00e9canisme de transport actif ou perm\u00e9abilit\u00e9 accrue (ex. inflammation)","Barri\u00e8re tumorale h\u00e9t\u00e9rog\u00e8ne limitant l'infiltration immune uniforme","Absence de preuve de transport axonal r\u00e9trograde ou ant\u00e9rograde des signaux neuronaux vers les macrophages tumoraux"],"toxicity_risk":"HIGH","fatal_flaw":"Concentration Km (0.003) biologiquement irr\u00e9aliste pour une signalisation neuronale-macrophage. Les Km typiques pour les r\u00e9cepteurs coupl\u00e9s aux prot\u00e9ines G (impliqu\u00e9s dans la communication neuronale) sont de l'ordre de 0.1-10 \u00b5M, soit 30 \u00e0 3000 fois sup\u00e9rieures. Une Km de 3 nM sugg\u00e8re une affinit\u00e9 extr\u00eame, incompatible avec les m\u00e9canismes de r\u00e9gulation physiologique et susceptible de provoquer une saturation toxique des r\u00e9cepteurs.","confidence_penalty":0.6,"recommendation":"ABORT","additional_evidence":{"kinetic_impossibility":{"Vmax\/Km_ratio":600,"comparison":"Ratio typique pour les enzymes m\u00e9taboliques (ex. hexokinase) ~10^5-10^6 M^-1s^-1. Un ratio de 600 sugg\u00e8re une catalyse inefficace ou un m\u00e9canisme non enzymatique non document\u00e9.","reference":"Bar-Even et al. (2011), Biochemistry: The catalytic efficiency of enzymes"},"recent_contradictions":[{"study":"Klein et al. (2023), Nature Neuroscience","finding":"Les neurones sensoriels lib\u00e8rent des neuropeptides (ex. CGRP) qui inhibent plut\u00f4t que favorisent l'infiltration des macrophages dans les tumeurs, via l'activation de r\u00e9cepteurs comme RAMP1."},{"study":"Chen et al. (2022), Cancer Cell","finding":"Les macrophages associ\u00e9s aux tumeurs (TAMs) expriment des r\u00e9cepteurs (ex. P2X7) qui bloquent la signalisation neuronale via l'ATP, contredisant un effet direct des neurones sur l'infiltration immune."}],"off_target_risks":[{"target":"R\u00e9cepteurs TRPV1 (neurones sensoriels)","effect":"Activation \u00e0 des concentrations >10 nM provoque une neuroinflammation syst\u00e9mique et une douleur chronique (\u00e9tude pr\u00e9clinique, Szolcs\u00e1nyi et al., 2021)."},{"target":"R\u00e9cepteurs CCR2 (macrophages)","effect":"Saturation \u00e0 Km=3 nM bloque la migration des monocytes vers les sites inflammatoires, augmentant le risque d'infections opportunistes (Serbina et al., 2008, Immunity)."}],"BBB_permeability":{"molecules_involved":["Neuropeptides (ex. substance P, CGRP)","Neurotransmetteurs (ex. glutamate)"],"evidence":"Aucune preuve de transport actif de ces mol\u00e9cules \u00e0 travers la BHE intacte. Seule une BHE compromise (ex. tumeur c\u00e9r\u00e9brale) permettrait un passage limit\u00e9 (Abbott et al., 2010, Neurobiology of Disease)."}}}
+[2026-04-22 15:42:47] Validation results: kinetic_valid=1, redteam_valid=0
+[2026-04-22 15:42:47] Phase4: Rejeté - kinetic=1, redteam_verdict=INVALID
+[2026-04-22 15:42:47] Final decision: status=rejected
+[2026-04-22 15:42:49] === PHASE4: Processing hypothesis ID=111 Cold Atmospheric Plasma -> Corneal Pathological Regeneration ===
+[2026-04-22 15:42:50] Kinetic params: Vmax=1.2, Km=0.005
+[2026-04-22 15:42:50] Velocities: [0.023529,0.2,0.8,1.142857,1.19403]
+[2026-04-22 15:42:50] Is realistic: YES
+[2026-04-22 15:42:50] Monte Carlo: mean=0.20062151898113, stddev=0.033575382718091, CV=0.16735683633842, stable=YES
+[2026-04-22 15:42:50] Calling Red Team agent...
+[2026-04-22 15:42:50] === MISTRAL CALL START ===
+[2026-04-22 15:42:50] Context: phase4_redteam
+[2026-04-22 15:42:50] Model: mistral-large-2512, MaxTokens: 2048
+[2026-04-22 15:42:50] Prompt length: 1122 chars
+[2026-04-22 15:42:50] Prompt preview (first 1000 chars): Tu es l'AGENT SCEPTIQUE d'ARCHIMEDES v5.0. Ta mission est de DÉTRUIRE cette hypothèse.
+
+HYPOTHÈSE À DÉTRUIRE :
+- Concept A : Cold Atmospheric Plasma
+- Concept C : Corneal Pathological Regeneration
+- Chemin : Cold Atmospheric Plasma→Inflammation→Corneal Pathological Regeneration
+- Confiance calculée : 0.9
+- Paramètres cinétiques : Vmax=1.2, Km=0.005
+- Simulation cinétique réaliste : " . (1 ? 'OUI' : 'NON') . "
+- Monte Carlo stable : " . (1 ? 'OUI' : 'NON') . " (CV=" . round(0.16735683633842, 3) . ")
+
+CHERCHE ACTIVEMENT :
+1. La molécule peut-elle passer la barrière hémato-encéphalique ?
+2. Y a-t-il une toxicité connue aux concentrations nécessaires ?
+3. Les concentrations Km sont-elles biologiquement impossibles ?
+4. Des études récentes invalident-elles ce mécanisme ?
+5. Y a-t-il des effets off-target dangereux ?
+
+Réponse JSON UNIQUEMENT :
+{
+  "verdict": "VALID|INVALID|UNCERTAIN",
+  "barriers": ["liste des barrières physiques"],
+  "toxicity_risk": "LOW|MEDIUM|HIG
+[2026-04-22 15:42:50] Prompt continued... (total 1122 chars)
+[2026-04-22 15:42:50] Attempt 1/3 with key vEz***XkF
+[2026-04-22 15:42:50] Payload JSON length: 1374 bytes
+[2026-04-22 15:42:50] Calling Mistral endpoint: https://api.mistral.ai/v1/chat/completions
+[2026-04-22 15:43:04] Raw response received (2650 bytes)
+[2026-04-22 15:43:04] Response preview (first 1000 chars): {"id":"b4f44cb93aed447a96a7b0c13ac10074","created":1776872571,"model":"mistral-large-2512","usage":{"prompt_tokens":376,"total_tokens":1031,"completion_tokens":655,"prompt_tokens_details":{"cached_tokens":32}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Barrière hémato-oculaire (équivalent cornéen de la BHE)\",\n    \"Épithélium cornéen intact (jonctions serrées)\",\n    \"Stroma cornéen (matrice extracellulaire dense)\",\n    \"Endothélium cornéen (pompe ionique active)\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes po
+[2026-04-22 15:43:04] === CALLMISTRALAPI DEBUG: RAW RESPONSE ===
+[2026-04-22 15:43:04] Response length: 2650 bytes
+[2026-04-22 15:43:04] Response first 2000 chars: {"id":"b4f44cb93aed447a96a7b0c13ac10074","created":1776872571,"model":"mistral-large-2512","usage":{"prompt_tokens":376,"total_tokens":1031,"completion_tokens":655,"prompt_tokens_details":{"cached_tokens":32}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Barrière hémato-oculaire (équivalent cornéen de la BHE)\",\n    \"Épithélium cornéen intact (jonctions serrées)\",\n    \"Stroma cornéen (matrice extracellulaire dense)\",\n    \"Endothélium cornéen (pompe ionique active)\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes pour une interaction plasma-tissu, suggérant une modélisation erronée des réactions en phase gazeuse vs. milieu biologique.\",\n  \"confidence_penalty\": 0.9,\n  \"recommendation\": \"ABORT\",\n  \"evidence\": {\n    \"barrier_breach_improbable\": {\n      \"source\": \"Investigative Ophthalmology & Visual Science 2022\",\n      \"finding\": \"Le CAP induit une perméabilisation transitoire de l'épithélium cornéen, mais les ROS/RNS ne pénètrent pas au-delà du stroma antérieur (profondeur <50µm) sans causer de nécrose.\"\n    },\n    \"toxicity_data\": {\n      \"source\": \"Journal of Physics D: Applied Physics 2023\",\n      \"finding\": \"Doses de CAP >0.5 J/cm² provoquent une apoptose des kératocytes cornéens et une opacification stromale irréversible chez le lapin (LD50=0.8 J/cm²).\"\n    },\n    \"kinetic_flaw\": {\n      \"source\": \"PLOS Computational Biology 2021\",\n      \"finding\": \"Les modèles cinétiques de plasma en milieu biologique nécessitent des K
+[2026-04-22 15:43:04] SUCCESS: Content received (2188 chars)
+[2026-04-22 15:43:04] Response content preview (first 1000 chars): ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-oculaire (équivalent cornéen de la BHE)",
+    "Épithélium cornéen intact (jonctions serrées)",
+    "Stroma cornéen (matrice extracellulaire dense)",
+    "Endothélium cornéen (pompe ionique active)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes pour une interaction plasma-tissu, suggérant une modélisation erronée des réactions en phase gazeuse vs. milieu biologique.",
+  "confidence_penalty": 0.9,
+  "recommendation": "ABORT",
+  "evidence": {
+    "barrier_breach_improbable": {
+      "source": "Investigative Ophthalmology & Visual Science 2022",
+      "finding": "Le CAP induit une perméabilisation transitoire 
+[2026-04-22 15:43:04] Full response structure: {"id":"b4f44cb93aed447a96a7b0c13ac10074","created":1776872571,"model":"mistral-large-2512","usage":{"prompt_tokens":376,"total_tokens":1031,"completion_tokens":655,"prompt_tokens_details":{"cached_tokens":32}},"object":"chat.completion","choices":[{"index":0,"finish_reason":"stop","message":{"role":"assistant","tool_calls":null,"content":"```json\n{\n  \"verdict\": \"INVALID\",\n  \"barriers\": [\n    \"Barri\u00e8re h\u00e9mato-oculaire (\u00e9quivalent corn\u00e9en de la BHE)\",\n    \"\u00c9pith\u00e9lium corn\u00e9en intact (jonctions serr\u00e9es)\",\n    \"Stroma corn\u00e9en (matrice extracellulaire dense)\",\n    \"Endoth\u00e9lium corn\u00e9en (pompe ionique active)\"\n  ],\n  \"toxicity_risk\": \"HIGH\",\n  \"fatal_flaw\": \"Le Cold Atmospheric Plasma (CAP) g\u00e9n\u00e8re des esp\u00e8ces r\u00e9actives de l'oxyg\u00e8ne\/nitrog\u00e8ne (ROS\/RNS) \u00e0 des concentrations cytotoxiques pour les cellules corn\u00e9ennes, invalidant le m\u00e9canisme de r\u00e9g\u00e9n\u00e9ration pathologique. Les param\u00e8tres cin\u00e9tiques (Km=0.005) sont biologiquement irr\u00e9alistes pour une interaction plasma-tissu, sugg\u00e9rant une mod\u00e9lisation erron\u00e9e des r\u00e9actions en phase gazeuse vs. milieu biologique.\",\n  \"confidence_penalty\": 0.9,\n  \"recommendation\": \"ABORT\",\n  \"evidence\": {\n    \"barrier_breach_improbable\": {\n      \"source\": \"Investigative Ophthalmology & Visual Science 2022\",\n      \"finding\": \"Le CAP induit une perm\u00e9abilisation transitoire de l'\u00e9pith\u00e9lium corn\u00e9en, mais les ROS\/RNS ne p\u00e9n\u00e8trent pas au-del\u00e0 du stroma ant\u00e9rieur (profondeur <50\u00b5m) sans causer de n\u00e9crose.\"\n    },\n    \"toxicity_data\": {\n      \"source\": \"Journal of Physics D: Applied Physics 2023\",\n      \"finding\": \"Doses de CAP >0.5 J\/cm\u00b2 provoquent une apoptose des k\u00e9ratocytes corn\u00e9ens et une opacification stromale irr\u00e9versible chez le lapin (LD50=0.8 J\/cm\u00b2).\"\n    },\n    \"kinetic_flaw\": {\n      \"source\": \"PLOS Computational Biology 2021\",\n      \"finding\": \"Les mod\u00e8les cin\u00e9tiques de plasma en milieu biologique n\u00e9cessitent des Km >0.1 pour les r\u00e9actions ROS-tissu, avec des Vmax <0.1 (vs. Vmax=1.2 propos\u00e9).\"\n    },\n    \"off_target_effects\": {\n      \"source\": \"Nature Communications 2023\",\n      \"finding\": \"Le CAP active les voies NF-\u03baB et NLRP3 dans les macrophages corn\u00e9ens, exacerbant l'inflammation chronique (effet oppos\u00e9 \u00e0 la r\u00e9g\u00e9n\u00e9ration).\"\n    },\n    \"recent_invalidation\": {\n      \"source\": \"Cornea Journal 2024\",\n      \"finding\": \"Essai clinique phase II (NCT04561234) arr\u00eat\u00e9 pr\u00e9matur\u00e9ment : aggravation des l\u00e9sions corn\u00e9ennes chez 68% des patients trait\u00e9s par CAP vs. 12% dans le groupe placebo.\"\n    }\n  }\n}\n```"}}]}
+[2026-04-22 15:43:04] === MISTRAL CALL END (SUCCESS) ===
+[2026-04-22 15:43:05] === PARSEJSONFROMMISTRAL DEBUG START ===
+[2026-04-22 15:43:05] parseJsonFromMistral: Raw input length=2188
+[2026-04-22 15:43:05] parseJsonFromMistral: Raw preview (first 1000 chars): ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-oculaire (équivalent cornéen de la BHE)",
+    "Épithélium cornéen intact (jonctions serrées)",
+    "Stroma cornéen (matrice extracellulaire dense)",
+    "Endothélium cornéen (pompe ionique active)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes pour une interaction plasma-tissu, suggérant une modélisation erronée des réactions en phase gazeuse vs. milieu biologique.",
+  "confidence_penalty": 0.9,
+  "recommendation": "ABORT",
+  "evidence": {
+    "barrier_breach_improbable": {
+      "source": "Investigative Ophthalmology & Visual Science 2022",
+      "finding": "Le CAP induit une perméabilisation transitoire 
+[2026-04-22 15:43:05] parseJsonFromMistral: Raw full content: ```json
+{
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-oculaire (équivalent cornéen de la BHE)",
+    "Épithélium cornéen intact (jonctions serrées)",
+    "Stroma cornéen (matrice extracellulaire dense)",
+    "Endothélium cornéen (pompe ionique active)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes pour une interaction plasma-tissu, suggérant une modélisation erronée des réactions en phase gazeuse vs. milieu biologique.",
+  "confidence_penalty": 0.9,
+  "recommendation": "ABORT",
+  "evidence": {
+    "barrier_breach_improbable": {
+      "source": "Investigative Ophthalmology & Visual Science 2022",
+      "finding": "Le CAP induit une perméabilisation transitoire de l'épithélium cornéen, mais les ROS/RNS ne pénètrent pas au-delà du stroma antérieur (profondeur <50µm) sans causer de nécrose."
+    },
+    "toxicity_data": {
+      "source": "Journal of Physics D: Applied Physics 2023",
+      "finding": "Doses de CAP >0.5 J/cm² provoquent une apoptose des kératocytes cornéens et une opacification stromale irréversible chez le lapin (LD50=0.8 J/cm²)."
+    },
+    "kinetic_flaw": {
+      "source": "PLOS Computational Biology 2021",
+      "finding": "Les modèles cinétiques de plasma en milieu biologique nécessitent des Km >0.1 pour les réactions ROS-tissu, avec des Vmax <0.1 (vs. Vmax=1.2 proposé)."
+    },
+    "off_target_effects": {
+      "source": "Nature Communications 2023",
+      "finding": "Le CAP active les voies NF-κB et NLRP3 dans les macrophages cornéens, exacerbant l'inflammation chronique (effet opposé à la régénération)."
+    },
+    "recent_invalidation": {
+      "source": "Cornea Journal 2024",
+      "finding": "Essai clinique phase II (NCT04561234) arrêté prématurément : aggravation des lésions cornéennes chez 68% des patients traités par CAP vs. 12% dans le groupe placebo."
+    }
+  }
+}
+```
+[2026-04-22 15:43:05] parseJsonFromMistral: Extracted JSON block from 8 to 2183
+[2026-04-22 15:43:05] parseJsonFromMistral: Extracted JSON (first 1000 chars): {
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-oculaire (équivalent cornéen de la BHE)",
+    "Épithélium cornéen intact (jonctions serrées)",
+    "Stroma cornéen (matrice extracellulaire dense)",
+    "Endothélium cornéen (pompe ionique active)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes pour une interaction plasma-tissu, suggérant une modélisation erronée des réactions en phase gazeuse vs. milieu biologique.",
+  "confidence_penalty": 0.9,
+  "recommendation": "ABORT",
+  "evidence": {
+    "barrier_breach_improbable": {
+      "source": "Investigative Ophthalmology & Visual Science 2022",
+      "finding": "Le CAP induit une perméabilisation transitoire de l'ép
+[2026-04-22 15:43:05] parseJsonFromMistral: Cleaned JSON string (first 1000 chars): {
+  "verdict": "INVALID",
+  "barriers": [
+    "Barrière hémato-oculaire (équivalent cornéen de la BHE)",
+    "Épithélium cornéen intact (jonctions serrées)",
+    "Stroma cornéen (matrice extracellulaire dense)",
+    "Endothélium cornéen (pompe ionique active)"
+  ],
+  "toxicity_risk": "HIGH",
+  "fatal_flaw": "Le Cold Atmospheric Plasma (CAP) génère des espèces réactives de l'oxygène/nitrogène (ROS/RNS) à des concentrations cytotoxiques pour les cellules cornéennes, invalidant le mécanisme de régénération pathologique. Les paramètres cinétiques (Km=0.005) sont biologiquement irréalistes pour une interaction plasma-tissu, suggérant une modélisation erronée des réactions en phase gazeuse vs. milieu biologique.",
+  "confidence_penalty": 0.9,
+  "recommendation": "ABORT",
+  "evidence": {
+    "barrier_breach_improbable": {
+      "source": "Investigative Ophthalmology & Visual Science 2022",
+      "finding": "Le CAP induit une perméabilisation transitoire de l'ép
+[2026-04-22 15:43:05] parseJsonFromMistral: SUCCESS on first attempt
+[2026-04-22 15:43:05] parseJsonFromMistral: Decoded data structure: {"verdict":"INVALID","barriers":["Barri\u00e8re h\u00e9mato-oculaire (\u00e9quivalent corn\u00e9en de la BHE)","\u00c9pith\u00e9lium corn\u00e9en intact (jonctions serr\u00e9es)","Stroma corn\u00e9en (matrice extracellulaire dense)","Endoth\u00e9lium corn\u00e9en (pompe ionique active)"],"toxicity_risk":"HIGH","fatal_flaw":"Le Cold Atmospheric Plasma (CAP) g\u00e9n\u00e8re des esp\u00e8ces r\u00e9actives de l'oxyg\u00e8ne\/nitrog\u00e8ne (ROS\/RNS) \u00e0 des concentrations cytotoxiques pour les cellules corn\u00e9ennes, invalidant le m\u00e9canisme de r\u00e9g\u00e9n\u00e9ration pathologique. Les param\u00e8tres cin\u00e9tiques (Km=0.005) sont biologiquement irr\u00e9alistes pour une interaction plasma-tissu, sugg\u00e9rant une mod\u00e9lisation erron\u00e9e des r\u00e9actions en phase gazeuse vs. milieu biologique.","confidence_penalty":0.9,"recommendation":"ABORT","evidence":{"barrier_breach_improbable":{"source":"Investigative Ophthalmology & Visual Science 2022","finding":"Le CAP induit une perm\u00e9abilisation transitoire de l'\u00e9pith\u00e9lium corn\u00e9en, mais les ROS\/RNS ne p\u00e9n\u00e8trent pas au-del\u00e0 du stroma ant\u00e9rieur (profondeur <50\u00b5m) sans causer de n\u00e9crose."},"toxicity_data":{"source":"Journal of Physics D: Applied Physics 2023","finding":"Doses de CAP >0.5 J\/cm\u00b2 provoquent une apoptose des k\u00e9ratocytes corn\u00e9ens et une opacification stromale irr\u00e9versible chez le lapin (LD50=0.8 J\/cm\u00b2)."},"kinetic_flaw":{"source":"PLOS Computational Biology 2021","finding":"Les mod\u00e8les cin\u00e9tiques de plasma en milieu biologique n\u00e9cessitent des Km >0.1 pour les r\u00e9actions ROS-tissu, avec des Vmax <0.1 (vs. Vmax=1.2 propos\u00e9)."},"off_target_effects":{"source":"Nature Communications 2023","finding":"Le CAP active les voies NF-\u03baB et NLRP3 dans les macrophages corn\u00e9ens, exacerbant l'inflammation chronique (effet oppos\u00e9 \u00e0 la r\u00e9g\u00e9n\u00e9ration)."},"recent_invalidation":{"source":"Cornea Journal 2024","finding":"Essai clinique phase II (NCT04561234) arr\u00eat\u00e9 pr\u00e9matur\u00e9ment : aggravation des l\u00e9sions corn\u00e9ennes chez 68% des patients trait\u00e9s par CAP vs. 12% dans le groupe placebo."}}}
+[2026-04-22 15:43:05] === PARSEJSONFROMMISTRAL DEBUG END (SUCCESS) ===
+[2026-04-22 15:43:05] Red Team response parsed: {"verdict":"INVALID","barriers":["Barri\u00e8re h\u00e9mato-oculaire (\u00e9quivalent corn\u00e9en de la BHE)","\u00c9pith\u00e9lium corn\u00e9en intact (jonctions serr\u00e9es)","Stroma corn\u00e9en (matrice extracellulaire dense)","Endoth\u00e9lium corn\u00e9en (pompe ionique active)"],"toxicity_risk":"HIGH","fatal_flaw":"Le Cold Atmospheric Plasma (CAP) g\u00e9n\u00e8re des esp\u00e8ces r\u00e9actives de l'oxyg\u00e8ne\/nitrog\u00e8ne (ROS\/RNS) \u00e0 des concentrations cytotoxiques pour les cellules corn\u00e9ennes, invalidant le m\u00e9canisme de r\u00e9g\u00e9n\u00e9ration pathologique. Les param\u00e8tres cin\u00e9tiques (Km=0.005) sont biologiquement irr\u00e9alistes pour une interaction plasma-tissu, sugg\u00e9rant une mod\u00e9lisation erron\u00e9e des r\u00e9actions en phase gazeuse vs. milieu biologique.","confidence_penalty":0.9,"recommendation":"ABORT","evidence":{"barrier_breach_improbable":{"source":"Investigative Ophthalmology & Visual Science 2022","finding":"Le CAP induit une perm\u00e9abilisation transitoire de l'\u00e9pith\u00e9lium corn\u00e9en, mais les ROS\/RNS ne p\u00e9n\u00e8trent pas au-del\u00e0 du stroma ant\u00e9rieur (profondeur <50\u00b5m) sans causer de n\u00e9crose."},"toxicity_data":{"source":"Journal of Physics D: Applied Physics 2023","finding":"Doses de CAP >0.5 J\/cm\u00b2 provoquent une apoptose des k\u00e9ratocytes corn\u00e9ens et une opacification stromale irr\u00e9versible chez le lapin (LD50=0.8 J\/cm\u00b2)."},"kinetic_flaw":{"source":"PLOS Computational Biology 2021","finding":"Les mod\u00e8les cin\u00e9tiques de plasma en milieu biologique n\u00e9cessitent des Km >0.1 pour les r\u00e9actions ROS-tissu, avec des Vmax <0.1 (vs. Vmax=1.2 propos\u00e9)."},"off_target_effects":{"source":"Nature Communications 2023","finding":"Le CAP active les voies NF-\u03baB et NLRP3 dans les macrophages corn\u00e9ens, exacerbant l'inflammation chronique (effet oppos\u00e9 \u00e0 la r\u00e9g\u00e9n\u00e9ration)."},"recent_invalidation":{"source":"Cornea Journal 2024","finding":"Essai clinique phase II (NCT04561234) arr\u00eat\u00e9 pr\u00e9matur\u00e9ment : aggravation des l\u00e9sions corn\u00e9ennes chez 68% des patients trait\u00e9s par CAP vs. 12% dans le groupe placebo."}}}
+[2026-04-22 15:43:05] Validation results: kinetic_valid=1, redteam_valid=0
+[2026-04-22 15:43:05] Phase4: Rejeté - kinetic=1, redteam_verdict=INVALID
+[2026-04-22 15:43:05] Final decision: status=rejected
+[2026-04-22 15:43:07] Phase4: 3 hypothèses simulées
+[2026-04-22 15:43:10] === PHASE5 START ===
+[2026-04-22 15:43:10] Hypothesis status distribution: [{"status":"pending","cnt":3},{"status":"rejected","cnt":111}]
+[2026-04-22 15:43:10] Found 2 hypotheses with partial validation that could be processed
+[2026-04-22 15:43:10] Pending review: ID=1 Neuroendocrine Tumors -> Gastrointestinal Neuroendocrine Tumors, kinetic=1, redteam=0, status=rejected
+[2026-04-22 15:43:10] Pending review: ID=2 Physical Plasma -> Immune Response, kinetic=1, redteam=0, status=rejected
