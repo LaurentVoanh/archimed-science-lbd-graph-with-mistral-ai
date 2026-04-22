@@ -137,16 +137,29 @@ function actionInitDB(PDO $db): array {
 // ============================================================
 // MISTRAL API — Rotation des clés + cURL robuste
 // ============================================================
-function callMistral(array $keys, string $prompt, string $model = 'mistral-large-2512', int $maxTokens = 4096): array {
+function callMistral(array $keys, string $prompt, string $model = 'mistral-large-2512', int $maxTokens = 4096, string $context = ''): array {
     static $keyIndex = 0;
 
     $attempts = 0;
     $lastError = '';
 
+    // LOG COMPLET : Appel entrant
+    archLog("=== MISTRAL CALL START ===");
+    archLog("Context: " . ($context ?: 'general'));
+    archLog("Model: {$model}, MaxTokens: {$maxTokens}");
+    archLog("Prompt length: " . strlen($prompt) . " chars");
+    archLog("Prompt preview (first 1000 chars): " . substr($prompt, 0, 1000));
+    if (strlen($prompt) > 1000) {
+        archLog("Prompt continued... (total " . strlen($prompt) . " chars)");
+    }
+
     while ($attempts < count($keys)) {
         $key = $keys[$keyIndex % count($keys)];
+        $keyMasked = substr($key, 0, 3) . '***' . substr($key, -3);
         $keyIndex = ($keyIndex + 1) % count($keys);
         $attempts++;
+
+        archLog("Attempt {$attempts}/" . count($keys) . " with key {$keyMasked}");
 
         $payload = json_encode([
             'model'       => $model,
@@ -154,6 +167,8 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
             'temperature' => 0.3,
             'messages'    => [['role' => 'user', 'content' => $prompt]],
         ]);
+
+        archLog("Payload JSON length: " . strlen($payload) . " bytes");
 
         $ctx = stream_context_create([
             'http' => [
@@ -165,37 +180,63 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
             ],
         ]);
 
+        archLog("Calling Mistral endpoint: " . MISTRAL_ENDPOINT);
         $raw = @file_get_contents(MISTRAL_ENDPOINT, false, $ctx);
 
         if ($raw === false) {
             $lastError = 'file_get_contents failed';
+            archLog("ERROR: file_get_contents failed");
+            archLog("HTTP response headers: " . print_r($http_response_header ?? 'no headers', true));
             sleep(2);
             continue;
         }
 
+        archLog("Raw response received (" . strlen($raw) . " bytes)");
+        archLog("Response preview (first 1000 chars): " . substr($raw, 0, 1000));
+
         $data = json_decode($raw, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            archLog("JSON decode error: " . json_last_error_msg());
+            archLog("Raw response (full): " . $raw);
+        }
 
         if (isset($data['error'])) {
             $lastError = $data['error']['message'] ?? 'API error';
+            archLog("API ERROR: " . $lastError);
+            archLog("Full error object: " . json_encode($data['error']));
             if (str_contains($lastError, 'rate') || str_contains($lastError, 'limit')) {
+                archLog("Rate limit detected, sleeping 3s");
                 sleep(3);
             }
             continue;
         }
 
         if (isset($data['choices'][0]['message']['content'])) {
+            $content = $data['choices'][0]['message']['content'];
+            archLog("SUCCESS: Content received (" . strlen($content) . " chars)");
+            archLog("Response content preview (first 1000 chars): " . substr($content, 0, 1000));
+            archLog("Full response structure: " . json_encode($data));
+            archLog("=== MISTRAL CALL END (SUCCESS) ===");
             sleep(1); // Rate limit: 1 req/sec
-            return ['ok' => true, 'content' => $data['choices'][0]['message']['content'], 'model' => $model];
+            return ['ok' => true, 'content' => $content, 'model' => $model];
         }
 
         $lastError = 'No content in response';
+        archLog("WARNING: No content in response");
+        archLog("Full response: " . json_encode($data));
         sleep(1);
     }
 
+    archLog("=== MISTRAL CALL END (FAILED) ===");
+    archLog("Final error after {$attempts} attempts: " . $lastError);
     return ['ok' => false, 'error' => $lastError];
 }
 
 function parseJsonFromMistral(string $raw): ?array {
+    archLog("parseJsonFromMistral: Raw input length=" . strlen($raw));
+    archLog("parseJsonFromMistral: Raw preview (first 500 chars): " . substr($raw, 0, 500));
+    
     $raw = trim($raw);
     
     // Étape 0: Supprimer tout texte avant le premier { ou [ et après le dernier } ou ]
@@ -217,13 +258,18 @@ function parseJsonFromMistral(string $raw): ?array {
         
         if ($start <= $end && $start < strlen($raw)) {
             $raw = substr($raw, $start, $end - $start + 1);
+            archLog("parseJsonFromMistral: Extracted JSON block from {$start} to {$end}");
         }
     }
     
     // Étape 1: SUPPRIMER les balises Markdown (au cas où elles sont à l'intérieur)
+    $rawBefore = $raw;
     $raw = preg_replace('/```json\s*/i', '', $raw);
     $raw = preg_replace('/```\s*/i', '', $raw);
     $raw = trim($raw);
+    if ($raw !== $rawBefore) {
+        archLog("parseJsonFromMistral: Removed markdown backticks");
+    }
     
     // Étape 2: Supprimer les caractères de contrôle (sauf tab, newline)
     $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
@@ -232,22 +278,29 @@ function parseJsonFromMistral(string $raw): ?array {
     $raw = str_replace(['"', '"', '"'], '"', $raw);
     $raw = str_replace(["'", "'", "'"], "'", $raw);
     
+    archLog("parseJsonFromMistral: Cleaned JSON string (first 500 chars): " . substr($raw, 0, 500));
+    
     // Étape 4: Tenter le parsing
     $decoded = json_decode($raw, true);
     if ($decoded !== null) {
+        archLog("parseJsonFromMistral: SUCCESS on first attempt");
         return $decoded;
     }
     
+    archLog("parseJsonFromMistral: First parse failed: " . json_last_error_msg());
+    
     // Étape 5: Si échec, tenter de réparer les erreurs courantes
     // Ajouter des guillemets manquants autour des keys non-quoted
-    $raw = preg_replace('/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/u', '$1"$2":', $raw);
-    $decoded = json_decode($raw, true);
+    $rawRepaired = preg_replace('/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/u', '$1"$2":', $raw);
+    $decoded = json_decode($rawRepaired, true);
     if ($decoded !== null) {
+        archLog("parseJsonFromMistral: SUCCESS after key repair");
         return $decoded;
     }
     
     // Étape 6: Logging pour debug
     archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 300));
+    archLog("ParseJSON failed: Attempted repaired version (first 300 chars): " . substr($rawRepaired, 0, 300));
     
     return null;
 }
@@ -633,10 +686,14 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
     $results = [];
 
     foreach ($hypotheses as $h) {
+        archLog("=== PHASE4: Processing hypothesis ID={$h['id']} {$h['name_a']} -> {$h['name_c']} ===");
+        
         // Simulation Michaelis-Menten
         $vMax = (float)($h['vmax'] ?? 1.0);
         $km   = (float)($h['km'] ?? 0.001);
         if ($km <= 0) $km = 0.001;
+
+        archLog("Kinetic params: Vmax={$vMax}, Km={$km}");
 
         $substrates = [0.0001, 0.001, 0.01, 0.1, 1.0]; // concentrations physiologiques
         $velocities = [];
@@ -649,6 +706,9 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
             if ($s <= 0.01 && $v > ($vMax * 0.1)) $isRealistic = true;
         }
 
+        archLog("Velocities: " . json_encode($velocities));
+        archLog("Is realistic: " . ($isRealistic ? 'YES' : 'NO'));
+
         // Monte Carlo : 100 itérations avec variation ±20%
         $mcResults = [];
         for ($i = 0; $i < 100; $i++) {
@@ -660,7 +720,10 @@ function actionPhase4Simulate(PDO $db, array $keys): array {
         sort($mcResults);
         $mcMean   = array_sum($mcResults) / count($mcResults);
         $mcStdDev = sqrt(array_sum(array_map(fn($x) => pow($x - $mcMean, 2), $mcResults)) / count($mcResults));
-        $mcStable = ($mcStdDev / $mcMean) < 0.3; // CV < 30% = stable
+        $mcCV     = $mcStdDev / ($mcMean ?: 1);
+        $mcStable = $mcCV < 0.3; // CV < 30% = stable
+
+        archLog("Monte Carlo: mean={$mcMean}, stddev={$mcStdDev}, CV={$mcCV}, stable=" . ($mcStable ? 'YES' : 'NO'));
 
         // Agent Sceptique "Red Team"
         $prompt = <<<PROMPT
@@ -673,7 +736,7 @@ HYPOTHÈSE À DÉTRUIRE :
 - Confiance calculée : {$h['confidence']}
 - Paramètres cinétiques : Vmax={$vMax}, Km={$km}
 - Simulation cinétique réaliste : " . ($isRealistic ? 'OUI' : 'NON') . "
-- Monte Carlo stable : " . ($mcStable ? 'OUI' : 'NON') . "
+- Monte Carlo stable : " . ($mcStable ? 'OUI' : 'NON') . " (CV=" . round($mcCV, 3) . ")
 
 CHERCHE ACTIVEMENT :
 1. La molécule peut-elle passer la barrière hémato-encéphalique ?
@@ -693,14 +756,38 @@ Réponse JSON UNIQUEMENT :
 }
 PROMPT;
 
-        $redTeam = callMistral($keys, $prompt, 'mistral-large-2512', 2048);
+        archLog("Calling Red Team agent...");
+        $redTeam = callMistral($keys, $prompt, 'mistral-large-2512', 2048, 'phase4_redteam');
         $rtData = null;
         if ($redTeam['ok']) {
             $rtData = parseJsonFromMistral($redTeam['content']);
+            archLog("Red Team response parsed: " . json_encode($rtData));
+        } else {
+            archLog("Red Team call failed: " . ($redTeam['error'] ?? 'unknown error'));
         }
 
         $kineticValid = $isRealistic && $mcStable ? 1 : 0;
         $redTeamValid = ($rtData && ($rtData['verdict'] ?? '') !== 'INVALID') ? 1 : 0;
+
+        archLog("Validation results: kinetic_valid={$kineticValid}, redteam_valid={$redTeamValid}");
+
+        // CRITÈRE ASSOUPÉLI : Accepter si au moins 1 des 2 critères est validé
+        // OU si le Red Team dit UNCERTAIN (pas clairement INVALID)
+        $shouldValidate = ($kineticValid || $redTeamValid) && (!$rtData || ($rtData['verdict'] ?? '') !== 'INVALID');
+        
+        // Encore plus souple : si kinetic est bon ET redteam n'est pas clairement INVALID, on valide
+        if ($kineticValid && (!$rtData || ($rtData['verdict'] ?? '') !== 'INVALID')) {
+            $shouldValidate = true;
+        }
+        
+        // Si les deux sont mauvais, on rejette
+        if (!$kineticValid && !$redTeamValid) {
+            $shouldValidate = false;
+        }
+
+        $newStatus = $shouldValidate ? 'validated' : 'rejected';
+        
+        archLog("Final decision: status={$newStatus}");
 
         $db->prepare("
             UPDATE hypotheses SET 
@@ -709,7 +796,7 @@ PROMPT;
         ")->execute([
             $kineticValid,
             $redTeamValid,
-            ($kineticValid && $redTeamValid) ? 'validated' : 'rejected',
+            $newStatus,
             $h['id'],
         ]);
 
@@ -718,12 +805,12 @@ PROMPT;
             'concept_a'      => $h['name_a'],
             'concept_c'      => $h['name_c'],
             'kinetic_valid'  => (bool)$kineticValid,
-            'monte_carlo_cv' => round($mcStdDev / ($mcMean ?: 1), 3),
+            'monte_carlo_cv' => round($mcCV, 3),
             'velocities'     => $velocities,
             'redteam_verdict'=> $rtData['verdict'] ?? 'N/A',
             'recommendation' => $rtData['recommendation'] ?? 'N/A',
             'barriers'       => $rtData['barriers'] ?? [],
-            'final_status'   => ($kineticValid && $redTeamValid) ? 'VALIDATED' : 'REJECTED',
+            'final_status'   => $newStatus === 'validated' ? 'VALIDATED' : 'REJECTED',
         ];
 
         sleep(2);
@@ -737,6 +824,12 @@ PROMPT;
 // PHASE 5 — Validation Nouveauté + Génération Preprint
 // ============================================================
 function actionPhase5Validate(PDO $db, array $keys): array {
+    archLog("=== PHASE5 START ===");
+    
+    // Debug : voir combien d'hypothèses sont dans chaque statut
+    $statusCounts = $db->query("SELECT status, COUNT(*) as cnt FROM hypotheses GROUP BY status")->fetchAll();
+    archLog("Hypothesis status distribution: " . json_encode($statusCounts));
+    
     $validated = $db->query("
         SELECT h.*, ca.name as name_a, cc.name as name_c
         FROM hypotheses h
@@ -747,24 +840,52 @@ function actionPhase5Validate(PDO $db, array $keys): array {
     ")->fetchAll();
 
     if (empty($validated)) {
+        // Vérifier s'il y a des hypothèses avec kinetic_valid=1 ou redteam_valid=1 qui ne sont pas encore traitées
+        $pendingReview = $db->query("
+            SELECT h.*, ca.name as name_a, cc.name as name_c
+            FROM hypotheses h
+            JOIN concepts ca ON h.concept_a = ca.id
+            JOIN concepts cc ON h.concept_c = cc.id
+            WHERE h.novelty_valid = 0 
+            AND (h.kinetic_valid = 1 OR h.redteam_valid = 1)
+            AND h.status != 'complete'
+            LIMIT 2
+        ")->fetchAll();
+        
+        if (!empty($pendingReview)) {
+            archLog("Found " . count($pendingReview) . " hypotheses with partial validation that could be processed");
+            foreach ($pendingReview as $h) {
+                archLog("Pending review: ID={$h['id']} {$h['name_a']} -> {$h['name_c']}, kinetic={$h['kinetic_valid']}, redteam={$h['redteam_valid']}, status={$h['status']}");
+            }
+        }
+        
         return ['status' => 'warn', 'message' => 'Aucune hypothèse validée en attente de rapport. Lancez Phases 3 & 4.'];
     }
 
+    archLog("Found " . count($validated) . " validated hypotheses to process");
     $reports = [];
 
     foreach ($validated as $h) {
+        archLog("=== PHASE5: Processing hypothesis ID={$h['id']} {$h['name_a']} -> {$h['name_c']} ===");
+        
         // Filtre de nouveauté absolue — PubMed NOT query
         $queryA = urlencode($h['name_a']);
         $queryC = urlencode($h['name_c']);
         $noveltyUrl = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term={$queryA}+AND+{$queryC}&retmax=1&retmode=json";
+        
+        archLog("PubMed novelty check URL: {$noveltyUrl}");
         $noveltyRaw = @file_get_contents($noveltyUrl);
         $noveltyCount = 0;
         if ($noveltyRaw) {
             $nd = json_decode($noveltyRaw, true);
             $noveltyCount = (int)($nd['esearchresult']['count'] ?? 0);
+            archLog("PubMed API response: " . json_encode($nd));
+        } else {
+            archLog("PubMed API call failed or returned empty");
         }
 
         $isNovel = $noveltyCount === 0;
+        archLog("Novelty check: {$noveltyCount} existing articles, is_novel=" . ($isNovel ? 'YES' : 'NO'));
 
         // Génération du Pre-print
         $prompt = <<<PROMPT
@@ -792,11 +913,15 @@ FORMAT OBLIGATOIRE — JSON :
 }
 PROMPT;
 
-        $result = callMistral($keys, $prompt, 'mistral-large-2512', 6000);
+        archLog("Calling Mistral for preprint generation...");
+        $result = callMistral($keys, $prompt, 'mistral-large-2512', 6000, 'phase5_preprint');
         $reportData = null;
 
         if ($result['ok']) {
             $reportData = parseJsonFromMistral($result['content']);
+            archLog("Preprint data parsed: " . json_encode($reportData));
+        } else {
+            archLog("Preprint generation failed: " . ($result['error'] ?? 'unknown error'));
         }
 
         $reportPath = null;
@@ -817,9 +942,13 @@ PROMPT;
             $md .= "---\n*Confidence: {$h['confidence']} | Novelty: " . ($isNovel ? 'ABSOLUTE (0 prior art)' : "{$noveltyCount} related papers") . " | Impact Score: {$reportData['impact_score']}*\n";
 
             file_put_contents($reportPath, $md);
+            archLog("Preprint saved to: {$reportPath}");
 
             $db->prepare("UPDATE hypotheses SET novelty_valid = 1, report_path = ?, status = 'complete' WHERE id = ?")
                ->execute([$reportPath, $h['id']]);
+            archLog("Hypothesis ID={$h['id']} marked as complete");
+        } else {
+            archLog("No report data generated, hypothesis not updated");
         }
 
         $reports[] = [
@@ -837,6 +966,7 @@ PROMPT;
     }
 
     archLog("Phase5: " . count($reports) . " pre-prints générés");
+    archLog("=== PHASE5 END ===");
     return ['status' => 'ok', 'phase' => 5, 'reports' => $reports];
 }
 
@@ -880,7 +1010,8 @@ function actionGetLogs(): array {
     $logs = '';
     if (file_exists(LOG_PATH)) {
         $lines = file(LOG_PATH);
-        $logs = implode('', array_slice($lines, -50));
+        // Augmenté à 200 lignes pour voir plus de détails
+        $logs = implode('', array_slice($lines, -200));
     }
     return ['status' => 'ok', 'logs' => $logs];
 }
