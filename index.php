@@ -198,14 +198,8 @@ function callMistral(array $keys, string $prompt, string $model = 'mistral-large
 function parseJsonFromMistral(string $raw): ?array {
     $raw = trim($raw);
     
-    // Étape 1: SUPPRIMER D'ABORD les balises Markdown (avant toute extraction)
-    // Mistral peut ajouter du texte avant/après les balises ```json ... ```
-    $raw = preg_replace('/```json\s*/i', '', $raw);
-    $raw = preg_replace('/```\s*/i', '', $raw);
-    $raw = trim($raw);
-    
-    // Étape 2: Extraire le bloc JSON même s'il est entouré de texte
-    // Cherche le premier { ou [ et le dernier } ou ]
+    // Étape 0: Supprimer tout texte avant le premier { ou [ et après le dernier } ou ]
+    // C'est la protection ultime contre les réponses IA non conformes
     $firstBrace = strpos($raw, '{');
     $firstBracket = strpos($raw, '[');
     $lastBrace = strrpos($raw, '}');
@@ -226,19 +220,25 @@ function parseJsonFromMistral(string $raw): ?array {
         }
     }
     
-    // Étape 3: Supprimer les caractères de contrôle (sauf tab, newline)
+    // Étape 1: SUPPRIMER les balises Markdown (au cas où elles sont à l'intérieur)
+    $raw = preg_replace('/```json\s*/i', '', $raw);
+    $raw = preg_replace('/```\s*/i', '', $raw);
+    $raw = trim($raw);
+    
+    // Étape 2: Supprimer les caractères de contrôle (sauf tab, newline)
     $raw = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $raw);
     
-    // Étape 4: Nettoyer les espaces blancs dans les strings (optionnel)
-    // $raw = preg_replace('/\s+/', ' ', $raw);
+    // Étape 3: Remplacer les guillemets courbés par des guillemets droits
+    $raw = str_replace(['"', '"', '"'], '"', $raw);
+    $raw = str_replace(["'", "'", "'"], "'", $raw);
     
-    // Étape 5: Tenter le parsing
+    // Étape 4: Tenter le parsing
     $decoded = json_decode($raw, true);
     if ($decoded !== null) {
         return $decoded;
     }
     
-    // Étape 6: Si échec, tenter de réparer les erreurs courantes
+    // Étape 5: Si échec, tenter de réparer les erreurs courantes
     // Ajouter des guillemets manquants autour des keys non-quoted
     $raw = preg_replace('/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/u', '$1"$2":', $raw);
     $decoded = json_decode($raw, true);
@@ -246,16 +246,8 @@ function parseJsonFromMistral(string $raw): ?array {
         return $decoded;
     }
     
-    // Étape 7: Remplacer les guillemets courbés par des guillemets droits
-    $raw = str_replace(['"', '"', '"'], '"', $raw);
-    $raw = str_replace(["'", "'", "'"], "'", $raw);
-    $decoded = json_decode($raw, true);
-    if ($decoded !== null) {
-        return $decoded;
-    }
-    
-    // Étape 8: Logging pour debug
-    archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 200));
+    // Étape 6: Logging pour debug
+    archLog("ParseJSON failed: " . json_last_error_msg() . " | Raw preview: " . substr($raw, 0, 300));
     
     return null;
 }
@@ -552,7 +544,15 @@ MISSION :
 3. Détecte les clusters isolés sans lien vers des pathologies
 4. Identifie les 3 hypothèses les plus prometteuses (chemin le plus fort + inattendues)
 
-Réponds UNIQUEMENT en JSON :
+⚠️ CONTRAINTES STRICTES DE FORMAT ⚠️
+- Réponds UNIQUEMENT avec du JSON brut, SANS AUCUN texte avant ou après
+- PAS de balises markdown (pas de ```json ni ```)
+- PAS d'explications, PAS de commentaires, PAS de texte introductif ou conclusif
+- Le premier caractère de ta réponse DOIT être { ou [
+- Le dernier caractère de ta réponse DOIT être } ou ]
+- Si tu ajoutes du texte autour, ton analyse sera PERDUE
+
+FORMAT DE RÉPONSE OBLIGATOIRE (JSON brut uniquement) :
 {
   "hypotheses": [
     {
